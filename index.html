@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  areum dashboard v2.0                           ║
+     ║  2026-07-06                                     ║
+     ║  변경: 주간업무 2주 기간 단위 입력 (DB 구조 변경)  ║
+     ║       일정 구분 학생·교직원·학부모·기타           ║
+     ║       학년 체크박스 다중 선택                    ║
+     ║       태블릿·모바일 반응형                       ║
+     ╚══════════════════════════════════════════════════╝ -->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>areum dashboard v2.0</title>
+<style>
+/* ═══════════════════════════════════════════════
+   CSS 변수 & 리셋
+═══════════════════════════════════════════════ */
+:root{
+  --primary:#1a56db; --primary-light:#eff6ff;
+  --green:#059669;   --red:#dc2626;
+  --purple:#6c2bd9;  --purple-light:#ede9fe;
+  --amber:#d97706;   --amber-light:#fef3c7;
+  --border:#e5e7eb;  --gray-light:#f9fafb;
+  --text:#111827;    --text-muted:#6b7280;
+  --shadow:0 2px 8px rgba(0,0,0,.08);
+  --radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',sans-serif;background:#f3f4f6;color:var(--text);font-size:14px;}
+button{cursor:pointer;font-family:inherit;}
+input,select,textarea{font-family:inherit;font-size:13px;border:1.5px solid var(--border);
+  border-radius:8px;padding:6px 10px;outline:none;width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);}
+textarea{resize:vertical;}
+
+/* ── 레이아웃 ── */
+.header{background:var(--primary);color:white;padding:12px 20px;
+  display:flex;align-items:center;gap:12px;box-shadow:0 2px 6px rgba(0,0,0,.2);}
+.header h1{font-size:18px;font-weight:800;flex:1;}
+.hbtn{border:none;background:rgba(255,255,255,.2);color:white;
+  padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;}
+.hbtn:hover{background:rgba(255,255,255,.35);}
+.sync-badge{font-size:11px;opacity:.8;margin-left:auto;}
+
+/* ── 탭 네비게이션 ── */
+.tabs{display:flex;background:white;border-bottom:2px solid var(--border);overflow-x:auto;}
+.tab{padding:10px 18px;border:none;background:none;font-size:13px;font-weight:600;
+  color:var(--text-muted);white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-2px;}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary);}
+.tab:hover{color:var(--primary);}
+
+/* ── 메인 콘텐츠 ── */
+.main{max-width:1200px;margin:0 auto;padding:16px;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── 카드 ── */
+.card{background:white;border-radius:var(--radius);border:1px solid var(--border);
+  box-shadow:var(--shadow);margin-bottom:14px;}
+.card-hdr{display:flex;align-items:center;gap:8px;padding:12px 16px;
+  border-bottom:1px solid var(--border);}
+.card-ttl{font-size:14px;font-weight:800;flex:1;}
+.card-body{padding:14px 16px;}
+
+/* ── 버튼 ── */
+.sbtn{border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;}
+.sbtn-p{background:var(--primary);color:white;}
+.sbtn-p:hover{background:#1e40af;}
+.sbtn-g{background:#e5e7eb;color:#374151;}
+.sbtn-g:hover{background:#d1d5db;}
+.sbtn-r{background:#fee2e2;color:var(--red);}
+
+/* ── 빈 상태 ── */
+.empty{text-align:center;color:var(--text-muted);padding:24px;font-size:13px;}
+
+/* ── 달력 ── */
+.cal-nav{display:flex;align-items:center;gap:8px;}
+.cal-nav button{border:1px solid var(--border);background:var(--gray-light);
+  border-radius:6px;padding:4px 10px;font-size:13px;font-weight:700;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px;}
+.cal-day-hdr{text-align:center;font-size:11px;font-weight:700;padding:4px 0;
+  color:var(--text-muted);}
+.cal-day-hdr:first-child{color:var(--red);}
+.cal-day-hdr:last-child{color:#2563eb;}
+.cal-cell{min-height:70px;border:1px solid var(--border);border-radius:6px;padding:4px;
+  cursor:pointer;transition:.15s;}
+.cal-cell:hover{background:var(--primary-light);border-color:var(--primary);}
+.cal-cell.today{background:#eff6ff;border-color:var(--primary);font-weight:700;}
+.cal-cell.other-month{opacity:.4;}
+.cal-cell .date-num{font-size:12px;font-weight:700;margin-bottom:2px;}
+.cal-cell.sun .date-num{color:var(--red);}
+.cal-cell.sat .date-num{color:#2563eb;}
+.ev-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);
+  display:inline-block;margin-right:3px;}
+.ev-chip{font-size:10px;padding:1px 5px;border-radius:4px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:100%;display:block;margin-bottom:1px;}
+.chip-student{background:#dbeafe;color:#1e40af;}
+.chip-parent{background:#ede9fe;color:#6d28d9;}
+.chip-etc{background:#f3f4f6;color:#374151;}
+.grade-checks{display:flex;gap:14px;align-items:center;padding:5px 0;flex-wrap:wrap;}
+.check-lbl{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text);}
+.check-lbl input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--primary);}
+.chip-staff{background:#fef3c7;color:#92400e;}
+.chip-duty{background:#fee2e2;color:#991b1b;}
+.chip-pa{background:#ede9fe;color:#5b21b6;}
+
+/* ── 달력 상세 패널 ── */
+.ev-row{display:flex;align-items:flex-start;gap:8px;padding:8px;
+  border-radius:8px;margin-bottom:4px;background:var(--gray-light);cursor:pointer;}
+.ev-row:hover{background:var(--primary-light);}
+.ev-title{font-weight:700;font-size:13px;}
+.ev-cat{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+/* ── 주간업무 테이블 ── */
+.wk-table{width:100%;border-collapse:collapse;font-size:12px;}
+.wk-table th{background:#1e40af;color:white;padding:8px;text-align:center;font-size:12px;}
+.wk-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top;}
+.wk-table tr:hover td{background:#f0f9ff;}
+.wk-dept{font-weight:700;font-size:12px;min-width:80px;}
+.wk-task{color:#374151;}
+.wk-done{text-decoration:line-through;opacity:.5;}
+.wk-chk{color:var(--green);font-size:11px;}
+/* ── 주간 기간 내비게이션 ── */
+.wk-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.wk-nav-lbl{font-weight:700;color:var(--primary);font-size:13px;flex:1;text-align:center;}
+.wk-week-hdr{font-size:12px;font-weight:700;color:var(--primary);background:#eff6ff;padding:5px 10px;border-radius:6px;margin-bottom:4px;display:inline-block;}
+/* ── 입력 모달 2주 테이블 ── */
+.wk-input-tbl{width:100%;border-collapse:collapse;margin:8px 0;}
+.wk-input-tbl th{background:#eff6ff;padding:5px 6px;font-size:11px;text-align:center;border:1px solid #bfdbfe;color:#1e40af;}
+.wk-input-tbl td{padding:3px;border:1px solid var(--border);}
+.wk-mi{width:100%;border:none;font-size:12px;padding:4px 6px;background:transparent;box-sizing:border-box;}
+.wk-mi:focus{outline:1px solid var(--primary);background:#eff6ff;border-radius:3px;}
+
+/* ── 수행평가 ── */
+.pa-card{background:white;border:1.5px solid #c4b5fd;border-radius:10px;
+  padding:12px;margin-bottom:10px;}
+.pa-date-hdr{font-size:12px;font-weight:700;color:var(--purple);
+  padding:6px 10px;background:var(--purple-light);border-radius:8px;margin-bottom:6px;}
+.pa-item{padding:6px 0;border-bottom:1px solid #ede9fe;display:flex;gap:8px;align-items:flex-start;}
+.pa-item:last-child{border:none;}
+.pa-dot{width:8px;height:8px;border-radius:50%;background:var(--purple);flex-shrink:0;margin-top:4px;}
+.pa-subj{font-weight:700;color:var(--purple);font-size:13px;}
+.pa-meta{font-size:11px;color:var(--text-muted);}
+
+/* ── 복무 ── */
+.duty-card{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:10px;border:1.5px solid var(--border);cursor:pointer;
+  transition:.15s;margin-bottom:6px;}
+.duty-card:hover{border-color:var(--primary);background:var(--primary-light);}
+.duty-av{width:46px;height:46px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.duty-name{font-size:13px;font-weight:700;}
+.duty-meta{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+/* ── 핵심업무 ── */
+.hl-item{border-left:3px solid var(--primary);padding:8px 12px;
+  margin-bottom:6px;background:var(--gray-light);border-radius:0 8px 8px 0;
+  font-size:13px;}
+
+/* ── 실시간 배지 ── */
+.live-badge{display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;color:var(--green);font-weight:700;
+  background:#d1fae5;padding:3px 9px;border-radius:20px;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+  animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ── 오늘 날짜 배너 ── */
+.today-date-banner{
+  background:linear-gradient(135deg,#1e3a8a 0%,#4f46e5 55%,#7c3aed 100%);
+  color:#fff;border-radius:16px;padding:22px 28px;margin-bottom:18px;
+  display:flex;align-items:center;gap:24px;
+}
+.tdb-day-wrap{
+  display:flex;align-items:baseline;gap:12px;min-width:0;
+}
+.tdb-day{font-size:72px;font-weight:900;line-height:1;letter-spacing:-2px;}
+.tdb-dow{font-size:26px;font-weight:800;opacity:.9;}
+.tdb-right{flex:1;min-width:0;}
+.tdb-ym{font-size:14px;font-weight:600;opacity:.75;margin-bottom:6px;}
+.tdb-divider{border:none;border-top:1px solid rgba(255,255,255,.25);margin:8px 0;}
+.tdb-stats{display:flex;flex-wrap:wrap;gap:8px;}
+.tdb-stat{
+  background:rgba(255,255,255,.15);backdrop-filter:blur(4px);
+  border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;
+  white-space:nowrap;
+}
+.tdb-stat.none{background:rgba(255,255,255,.08);opacity:.65;}
+@media(max-width:480px){
+  .today-date-banner{flex-direction:column;gap:10px;padding:18px 20px;}
+  .tdb-day{font-size:54px;}
+  .tdb-dow{font-size:20px;}
+}
+
+/* ── 오늘 날짜 카드 ── */
+.today-section{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;}
+
+/* ── 모달 ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;
+  display:none;align-items:center;justify-content:center;padding:16px;}
+.overlay.open{display:flex;}
+.modal{background:white;border-radius:14px;padding:22px;width:100%;max-width:460px;
+  max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.modal-ttl{font-size:16px;font-weight:800;margin-bottom:16px;color:var(--primary);}
+.form-row{margin-bottom:10px;}
+.form-row label{display:block;font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:4px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.btn{border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;}
+.btn-p{background:var(--primary);color:white;}
+.btn-g{background:#e5e7eb;color:#374151;}
+.btn-r{background:#fee2e2;color:var(--red);}
+
+/* ── Firebase 연결 상태 ── */
+.fb-status{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;
+  display:inline-flex;align-items:center;gap:6px;}
+.fb-ok{background:#d1fae5;color:#065f46;}
+.fb-err{background:#fee2e2;color:#991b1b;}
+.fb-warn{background:#fef3c7;color:#92400e;}
+
+/* ── 사용법 탭 ── */
+.help-hero{background:linear-gradient(135deg,#1e40af,#6366f1);color:#fff;
+  border-radius:14px;padding:24px 28px;margin-bottom:18px;}
+.help-hero h2{font-size:20px;font-weight:800;margin-bottom:6px;}
+.help-hero p{font-size:13px;opacity:.85;}
+.help-section{margin-bottom:28px;}
+.help-section-ttl{font-size:15px;font-weight:800;
+  border-left:4px solid var(--primary);padding-left:12px;
+  margin-bottom:12px;color:var(--text);}
+.help-card{background:#fff;border:1px solid var(--border);border-radius:12px;
+  padding:16px 20px;margin-bottom:10px;}
+.help-card h4{font-size:14px;font-weight:800;margin-bottom:8px;
+  display:flex;align-items:center;gap:7px;}
+.help-card p,.help-card li{font-size:13px;color:#475569;line-height:1.75;margin-bottom:4px;}
+.help-card ul{padding-left:18px;}
+.help-step-row{display:flex;gap:14px;margin-bottom:10px;align-items:flex-start;}
+.help-step-num{width:26px;height:26px;min-width:26px;background:var(--primary);
+  color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;margin-top:1px;}
+.help-step-body{font-size:13px;color:#475569;line-height:1.7;}
+.help-step-body strong{color:var(--text);}
+.help-tip{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;
+  padding:10px 14px;font-size:12px;color:#1e40af;margin-top:8px;}
+.help-tip strong{color:#1e3a8a;}
+.help-admin-row{display:flex;align-items:center;gap:12px;padding:8px 0;
+  border-bottom:1px solid var(--border);}
+.help-admin-row:last-child{border:none;}
+.help-av{width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.help-admin-info strong{font-size:13px;font-weight:700;display:block;}
+.help-admin-info span{font-size:12px;color:var(--text-muted);}
+.help-faq-q{font-size:13px;font-weight:800;color:var(--primary);margin-bottom:4px;}
+.help-faq-a{font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;}
+.help-version{text-align:right;font-size:11px;color:var(--text-muted);margin-top:24px;}
+
+/* ══════════════════════════════════════════════════════
+   반응형 — 태블릿 (≤768px)
+══════════════════════════════════════════════════════ */
+@media(max-width:768px){
+  .main{padding:12px;}
+  .today-section{grid-template-columns:1fr 1fr;}
+  .cal-cell{min-height:58px;}
+  .header h1{font-size:16px;}
+  .tab-grid{grid-template-columns:1fr;}
+  .method-grid{grid-template-columns:1fr;}
+}
+
+/* ══════════════════════════════════════════════════════
+   반응형 — 모바일 (≤480px)
+══════════════════════════════════════════════════════ */
+@media(max-width:480px){
+  /* 헤더 */
+  .header{padding:10px 12px;gap:8px;}
+  .header h1{font-size:13px;}
+  .sync-badge{display:none;}
+  #appVersion{display:none;}
+
+  /* 탭 */
+  .tabs{-webkit-overflow-scrolling:touch;}
+  .tab{padding:10px 11px;font-size:11px;}
+
+  /* 메인 */
+  .main{padding:8px;}
+  .card-hdr{padding:10px 12px;flex-wrap:wrap;gap:6px;}
+  .card-body{padding:10px 12px;}
+
+  /* 오늘 섹션 */
+  .today-section{grid-template-columns:1fr;}
+  .today-date-banner{padding:16px 18px;gap:14px;}
+  .tdb-day{font-size:52px;}
+  .tdb-dow{font-size:19px;}
+  .tdb-ym{font-size:12px;}
+  .tdb-stat{font-size:11px;padding:3px 9px;}
+
+  /* 달력 */
+  .cal-cell{min-height:42px;padding:2px 3px;}
+  .cal-cell .date-num{font-size:11px;}
+  .ev-chip{font-size:9px;padding:1px 3px;margin-bottom:0;}
+
+  /* 복무 */
+  .duty-av{width:38px;height:38px;font-size:20px;}
+  .duty-name{font-size:12px;}
+
+  /* 모달 */
+  .modal{padding:16px 14px;}
+  .g2{grid-template-columns:1fr !important;}
+  .form-actions{flex-wrap:wrap;}
+  .form-actions .btn{flex:1;text-align:center;}
+
+  /* 주간업무 */
+  .wk-table th,.wk-table td{padding:5px 6px;font-size:11px;}
+
+  /* 사용법 */
+  .help-hero{padding:18px 16px;}
+  .help-hero h2{font-size:17px;}
+  .help-card{padding:12px 14px;}
+  .help-admin-row{gap:10px;}
+}
+
+/* 달력 — 모바일에서 칩 1개만 표시 */
+@media(max-width:480px){
+  .ev-chip:nth-child(n+3){display:none;}
+}
+
+/* ── 설정 패널 ── */
+.setup-box{background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;
+  padding:16px;margin-bottom:16px;}
+.setup-box h3{font-size:14px;font-weight:800;color:#92400e;margin-bottom:8px;}
+.setup-box code{background:#fff;border:1px solid #e5e7eb;border-radius:4px;
+  padding:2px 6px;font-size:12px;font-family:monospace;}
+.setup-input-row{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center;margin-bottom:6px;}
+.setup-input-row label{font-size:12px;font-weight:700;color:#92400e;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ 헤더 ═══════════ -->
+<div class="header">
+  <div style="font-size:22px;">🏫</div>
+  <h1 id="schoolNameEl">아름중학교 종합 대시보드</h1>
+  <span class="live-badge"><span class="live-dot"></span>실시간</span>
+  <span class="sync-badge" id="syncBadge">Firebase 연결 중…</span>
+  <span style="font-size:10px;color:var(--text-muted);background:#f1f5f9;border-radius:10px;padding:2px 8px;font-weight:700;" id="appVersion">v1.5</span>
+  <button class="hbtn" onclick="openNameModal()">⚙ 학교명</button>
+</div>
+
+<!-- ═══════════ 탭 ═══════════ -->
+<div class="tabs">
+  <button class="tab active" data-tab="today"     onclick="switchTab('today')">🏠 오늘</button>
+  <button class="tab"        data-tab="calendar"  onclick="switchTab('calendar')">📅 월중계획</button>
+  <button class="tab"        data-tab="weekly"    onclick="switchTab('weekly')">📋 주간업무</button>
+  <button class="tab"        data-tab="duty"      onclick="switchTab('duty')">🔐 관리자복무</button>
+  <button class="tab"        data-tab="pa"        onclick="switchTab('pa')">📝 수행평가</button>
+  <button class="tab"        data-tab="setup"     onclick="switchTab('setup')">⚙️ Firebase 설정</button>
+  <button class="tab"        data-tab="help"      onclick="switchTab('help')">❓ 사용법</button>
+</div>
+
+<!-- ═══════════ 메인 ═══════════ -->
+<div class="main">
+
+<!-- 🏠 오늘 -->
+<div class="page active" id="page-today">
+  <div class="today-date-banner" id="todayDateBanner"></div>
+  <div class="today-section">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-ttl">📅 오늘 일정</div>
+        <button class="sbtn sbtn-p" onclick="openAddEventModal()">+ 추가</button>
+      </div>
+      <div class="card-body" id="todayEvents"><div class="empty">일정 없음</div></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-ttl">🔐 오늘 복무</div>
+        <button class="sbtn sbtn-p" onclick="openAddDutyModal()">+ 추가</button>
+      </div>
+      <div class="card-body" id="todayDuty"><div class="empty">복무 없음</div></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><div class="card-ttl">📝 이번 주 수행평가</div></div>
+      <div class="card-body" id="todayPA"><div class="empty">이번 주 수행평가 없음</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-ttl">🌟 이번 주 핵심 업무</div></div>
+    <div class="card-body" id="todayHighlights"><div class="empty">핵심 업무 없음</div></div>
+  </div>
+</div>
+
+<!-- 📅 월중계획 -->
+<div class="page" id="page-calendar">
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-hdr">
+      <div class="card-ttl">
+        <div class="cal-nav">
+          <button onclick="prevMonth()">◀</button>
+          <span id="calTitle"></span>
+          <button onclick="nextMonth()">▶</button>
+        </div>
+      </div>
+      <button class="sbtn sbtn-p" onclick="openAddEventModal()">+ 일정 추가</button>
+    </div>
+    <div class="card-body"><div class="cal-grid" id="calGrid"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-ttl" id="calSelTitle">날짜를 클릭하세요</div>
+      <button class="sbtn sbtn-p" id="calAddBtn" style="display:none" onclick="openAddEventForDate()">+ 일정 추가</button>
+    </div>
+    <div class="card-body" id="calSelList"><div class="empty">날짜를 클릭하면 일정이 표시됩니다.</div></div>
+  </div>
+</div>
+
+<!-- 📋 주간업무 -->
+<div class="page" id="page-weekly">
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-ttl">📋 주간 부서별 업무</div>
+      <button class="sbtn sbtn-p" onclick="openWeeklyInputModal()">✏️ 부서업무 입력</button>
+    </div>
+    <div class="card-body">
+      <!-- 기간 내비게이션 -->
+      <div class="wk-nav">
+        <button class="sbtn" onclick="moveViewPeriod(-1)">◀ 이전</button>
+        <div class="wk-nav-lbl" id="wkNavLabel">—</div>
+        <button class="sbtn" onclick="moveViewPeriod(1)">다음 ▶</button>
+        <button class="sbtn" style="font-size:11px;padding:5px 10px;" onclick="resetViewPeriod()">기본주차</button>
+      </div>
+      <!-- 1주차 -->
+      <div id="wkWeek1Header" class="wk-week-hdr">📅 1주차</div>
+      <div style="overflow-x:auto;margin-bottom:16px;">
+        <table class="wk-table">
+          <thead><tr>
+            <th style="min-width:90px;">부서</th>
+            <th style="min-width:110px;">월</th><th style="min-width:110px;">화</th>
+            <th style="min-width:110px;">수</th><th style="min-width:110px;">목</th>
+            <th style="min-width:110px;">금</th><th style="min-width:80px;">비고</th>
+          </tr></thead>
+          <tbody id="wkTable1Body"><tr><td colspan="7" class="empty">업무 없음</td></tr></tbody>
+        </table>
+      </div>
+      <!-- 2주차 -->
+      <div id="wkWeek2Header" class="wk-week-hdr">📅 2주차</div>
+      <div style="overflow-x:auto;">
+        <table class="wk-table">
+          <thead><tr>
+            <th style="min-width:90px;">부서</th>
+            <th style="min-width:110px;">월</th><th style="min-width:110px;">화</th>
+            <th style="min-width:110px;">수</th><th style="min-width:110px;">목</th>
+            <th style="min-width:110px;">금</th><th style="min-width:80px;">비고</th>
+          </tr></thead>
+          <tbody id="wkTable2Body"><tr><td colspan="7" class="empty">업무 없음</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🔐 관리자복무 -->
+<div class="page" id="page-duty">
+  <div style="display:flex;gap:14px;flex-wrap:wrap;">
+    <div class="card" style="flex:0 0 220px;">
+      <div class="card-hdr"><div class="card-ttl">👤 관리자</div></div>
+      <div class="card-body" id="dutyPersonList"></div>
+    </div>
+    <div style="flex:1;min-width:280px;">
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-ttl">전체 복무 기록</div>
+          <button class="sbtn sbtn-p" onclick="openAddDutyModal()">+ 추가</button>
+        </div>
+        <div class="card-body" id="dutyList"><div class="empty">복무 기록 없음</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 📝 수행평가 -->
+<div class="page" id="page-pa">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;
+    background:white;padding:10px 14px;border-radius:10px;border:1px solid var(--border);">
+    <button onclick="movePACal(-1)" style="border:1.5px solid var(--border);background:var(--gray-light);
+      border-radius:8px;padding:4px 12px;font-size:14px;font-weight:700;">◀</button>
+    <strong id="paCalTitle" style="font-size:15px;font-weight:800;color:var(--purple);min-width:130px;text-align:center;"></strong>
+    <button onclick="movePACal(1)" style="border:1.5px solid var(--border);background:var(--gray-light);
+      border-radius:8px;padding:4px 12px;font-size:14px;font-weight:700;">▶</button>
+    <button class="sbtn sbtn-p" onclick="openAddPAModal()" style="margin-left:auto;">+ 수행평가 추가</button>
+  </div>
+  <div id="paGrid"><div class="empty">수행평가 데이터 없음</div></div>
+</div>
+
+<!-- ⚙️ Firebase 설정 -->
+<div class="page" id="page-setup">
+  <div class="setup-box">
+    <h3>🔥 Firebase 설정</h3>
+    <p style="font-size:12px;color:#78350f;margin-bottom:12px;">
+      아래에 Firebase 프로젝트 설정 값을 입력하고 <strong>저장 및 연결</strong>을 클릭하세요.<br>
+      설정 값은 이 기기에 저장됩니다 (localStorage).
+    </p>
+    <div class="setup-input-row"><label>API Key</label><input id="fb_apiKey" placeholder="AIzaSy..."/></div>
+    <div class="setup-input-row"><label>Auth Domain</label><input id="fb_authDomain" placeholder="your-app.firebaseapp.com"/></div>
+    <div class="setup-input-row"><label>Database URL</label><input id="fb_dbUrl" placeholder="https://your-app-default-rtdb.firebaseio.com"/></div>
+    <div class="setup-input-row"><label>Project ID</label><input id="fb_projectId" placeholder="your-app-id"/></div>
+    <div class="setup-input-row"><label>App ID</label><input id="fb_appId" placeholder="1:123456:web:abc"/></div>
+    <div style="margin-top:12px;display:flex;gap:8px;">
+      <button class="btn btn-p" onclick="saveFirebaseConfig()">💾 저장 및 연결</button>
+      <button class="btn btn-g" onclick="clearFirebaseConfig()">🗑 설정 초기화</button>
+    </div>
+    <div id="fbStatusBox" style="margin-top:10px;"></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-ttl">📖 Firebase 설정 방법</div></div>
+    <div class="card-body" style="font-size:13px;line-height:1.8;color:#374151;">
+      <ol style="padding-left:18px;">
+        <li><a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary);">Firebase Console</a>에서 새 프로젝트 생성</li>
+        <li><strong>Realtime Database</strong> → 데이터베이스 만들기 → <em>테스트 모드로 시작</em></li>
+        <li>프로젝트 설정(⚙️) → 일반 → 내 앱 → 웹 앱 추가 (<code>&lt;/&gt;</code>)</li>
+        <li>앱 등록 후 표시되는 <code>firebaseConfig</code> 값을 위 입력칸에 붙여넣기</li>
+        <li><strong>저장 및 연결</strong> 클릭 → 실시간 동기화 시작</li>
+      </ol>
+      <div style="margin-top:12px;padding:10px;background:#f0fdf4;border-radius:8px;border-left:3px solid var(--green);">
+        💡 <strong>공유 방법</strong>: 이 HTML 파일을 학교 서버에 올리거나 Google Drive에서 공유하면,
+        같은 Firebase 프로젝트에 연결된 모든 기기에서 <strong>실시간 동기화</strong>됩니다.
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end .main -->
+
+<!-- ═══════════ 모달들 ═══════════ -->
+
+<!-- 학교명 모달 -->
+<div class="overlay" id="nameModal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-ttl">⚙️ 학교명 변경</div>
+    <div class="form-row"><label>학교명</label><input id="nameInput" placeholder="아름중학교"/></div>
+    <div class="form-actions">
+      <button class="btn btn-g" onclick="closeModal('nameModal')">취소</button>
+      <button class="btn btn-p" onclick="saveName()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 월중계획 일정 추가/수정 모달 -->
+<div class="overlay" id="addEventModal">
+  <div class="modal">
+    <div class="modal-ttl" id="evModalTitle">+ 일정 추가</div>
+    <input type="hidden" id="evEditId">
+    <div class="form-row"><label>날짜</label><input type="date" id="evDate"/></div>
+    <div class="form-row"><label>행사명 *</label><input id="evTitle" placeholder="행사·일정 이름"/></div>
+    <div class="g2">
+      <div class="form-row">
+        <label>구분</label>
+        <select id="evType">
+          <option value="student">학생</option>
+          <option value="staff">교직원</option>
+          <option value="parent">학부모</option>
+          <option value="etc">기타</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>학년</label>
+        <div class="grade-checks">
+          <label class="check-lbl"><input type="checkbox" id="evGrade1" value="1학년"> 1학년</label>
+          <label class="check-lbl"><input type="checkbox" id="evGrade2" value="2학년"> 2학년</label>
+          <label class="check-lbl"><input type="checkbox" id="evGrade3" value="3학년"> 3학년</label>
+        </div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="form-row"><label>담당부서</label><input id="evDept" placeholder="교무부"/></div>
+      <div class="form-row"><label>장소</label><input id="evPlace" placeholder="강당"/></div>
+    </div>
+    <div class="form-row"><label>메모</label><textarea id="evMemo" rows="2"></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-r" id="evDeleteBtn" style="display:none" onclick="deleteEvent()">삭제</button>
+      <button class="btn btn-g" onclick="closeModal('addEventModal')">취소</button>
+      <button class="btn btn-p" onclick="saveEvent()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자복무 추가/수정 모달 -->
+<div class="overlay" id="addDutyModal">
+  <div class="modal">
+    <div class="modal-ttl">🔐 관리자복무 입력</div>
+    <input type="hidden" id="dutyEditId">
+    <div class="g2">
+      <div class="form-row"><label>날짜</label><input type="date" id="dutyDate"/></div>
+      <div class="form-row">
+        <label>복무자</label>
+        <select id="dutyPerson">
+          <option>교장</option><option>1캠교감</option><option>2캠교감</option><option>교감</option>
+        </select>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="form-row">
+        <label>복무유형</label>
+        <select id="dutyKind">
+          <option>출장</option><option>연가</option><option>병가</option>
+          <option>공가</option><option>특별휴가</option><option>기타</option>
+        </select>
+      </div>
+      <div class="form-row"><label>사유</label><input id="dutyReason" placeholder="사유 입력"/></div>
+    </div>
+    <div class="g2">
+      <div class="form-row"><label>시작시간</label><input id="dutyFrom" placeholder="09:00"/></div>
+      <div class="form-row"><label>종료시간</label><input id="dutyTo" placeholder="18:00"/></div>
+    </div>
+    <div class="form-row"><label>대결자</label><input id="dutyDeputy" placeholder="대결자 이름"/></div>
+    <div class="form-actions">
+      <button class="btn btn-r" id="dutyDeleteBtn" style="display:none" onclick="deleteDuty()">삭제</button>
+      <button class="btn btn-g" onclick="closeModal('addDutyModal')">취소</button>
+      <button class="btn btn-p" onclick="saveDuty()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 수행평가 추가 모달 -->
+<div class="overlay" id="addPAModal">
+  <div class="modal">
+    <div class="modal-ttl">📝 수행평가 추가</div>
+    <input type="hidden" id="paEditId">
+    <div class="g2">
+      <div class="form-row"><label>날짜</label><input type="date" id="paDate"/></div>
+      <div class="form-row"><label>교과 *</label><input id="paSubject" placeholder="국어"/></div>
+    </div>
+    <div class="g2">
+      <div class="form-row"><label>담당교사</label><input id="paTeacher" placeholder="홍길동"/></div>
+      <div class="form-row"><label>비고/내용</label><input id="paMemo" placeholder="논술·서술"/></div>
+    </div>
+    <div class="form-row"><label>대상반 (쉼표 구분)</label><input id="paClasses" placeholder="1-1, 1-2, 1-3"/></div>
+    <div class="form-actions">
+      <button class="btn btn-r" id="paDeleteBtn" style="display:none" onclick="deletePA()">삭제</button>
+      <button class="btn btn-g" onclick="closeModal('addPAModal')">취소</button>
+      <button class="btn btn-p" onclick="savePA()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 주간업무 입력 모달 -->
+<div class="overlay" id="weeklyInputModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-ttl">✏️ 주간업무 입력 (2주간)</div>
+    <!-- 기간 선택 -->
+    <div class="g2" style="margin-bottom:8px;">
+      <div class="form-row">
+        <label>1주차 시작일 (월요일)</label>
+        <input type="date" id="wkPeriodDate" oninput="onWkDateChange()"/>
+      </div>
+      <div class="form-row">
+        <label>부서</label>
+        <select id="wkDeptSel">
+          <option>1학년부</option><option>2학년부</option><option>3학년부</option>
+          <option>교무부</option><option>교육과정부</option><option>연구평가부</option>
+          <option>학생안전자치부</option><option>방과후학교부</option><option>글로벌인성복지부</option>
+          <option>스마트정보부</option><option>진로진학부</option><option>예술체육건강부</option>
+          <option>행정실</option>
+        </select>
+      </div>
+    </div>
+    <div id="wkWeekLabel" style="font-size:12px;color:var(--primary);font-weight:700;background:#eff6ff;padding:6px 10px;border-radius:6px;margin-bottom:12px;"></div>
+    <!-- 2주 입력 테이블 -->
+    <table class="wk-input-tbl">
+      <thead>
+        <tr>
+          <th style="width:32px;"></th>
+          <th id="wkMI1Label">1주차</th>
+          <th id="wkMI2Label">2주차</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><th>월</th><td><input class="wk-mi" id="wkW1Mon" placeholder="1주 월요일"/></td><td><input class="wk-mi" id="wkW2Mon" placeholder="2주 월요일"/></td></tr>
+        <tr><th>화</th><td><input class="wk-mi" id="wkW1Tue" placeholder="1주 화요일"/></td><td><input class="wk-mi" id="wkW2Tue" placeholder="2주 화요일"/></td></tr>
+        <tr><th>수</th><td><input class="wk-mi" id="wkW1Wed" placeholder="1주 수요일"/></td><td><input class="wk-mi" id="wkW2Wed" placeholder="2주 수요일"/></td></tr>
+        <tr><th>목</th><td><input class="wk-mi" id="wkW1Thu" placeholder="1주 목요일"/></td><td><input class="wk-mi" id="wkW2Thu" placeholder="2주 목요일"/></td></tr>
+        <tr><th>금</th><td><input class="wk-mi" id="wkW1Fri" placeholder="1주 금요일"/></td><td><input class="wk-mi" id="wkW2Fri" placeholder="2주 금요일"/></td></tr>
+      </tbody>
+    </table>
+    <div class="form-row" style="margin-top:8px;"><label>비고</label><textarea id="wkMemo" rows="2"></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-g" onclick="closeModal('weeklyInputModal')">취소</button>
+      <button class="btn btn-p" onclick="saveWeeklyInput()">저장 (실시간 반영)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ❓ 사용법 -->
+<div class="page" id="page-help">
+
+  <div class="help-hero">
+    <h2>❓ 사용법 안내</h2>
+    <p>처음 사용하시는 분도 쉽게 따라할 수 있도록 탭별로 설명합니다.</p>
+  </div>
+
+  <!-- 처음 시작하기 -->
+  <div class="help-section">
+    <div class="help-section-ttl">🚀 처음 시작하기</div>
+    <div class="help-card">
+      <h4>📂 파일 열기</h4>
+      <div class="help-step-row"><div class="help-step-num">1</div><div class="help-step-body"><strong>파일을 받으면</strong> 더블클릭하여 크롬(Chrome) 브라우저로 엽니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">2</div><div class="help-step-body">화면 상단에 <strong>🔥 실시간 동기화 중</strong>이 표시되면 자동으로 연결된 것입니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">3</div><div class="help-step-body">연결이 안 된다면 <strong>⚙️ Firebase 설정</strong> 탭에서 <strong>저장 및 연결</strong> 버튼을 눌러주세요.</div></div>
+      <div class="help-tip">💡 <strong>인터넷이 연결된 상태</strong>에서 사용해야 실시간 공유가 됩니다.</div>
+    </div>
+    <div class="help-card">
+      <h4>✏️ 데이터 입력 권한</h4>
+      <p>파일을 열면 누구나 내용을 입력·수정·삭제할 수 있습니다. 저장 버튼을 누르는 즉시 <strong>모든 사용자 화면에 실시간으로 반영</strong>됩니다.</p>
+    </div>
+  </div>
+
+  <!-- 오늘 탭 -->
+  <div class="help-section">
+    <div class="help-section-ttl">🏠 오늘 탭</div>
+    <div class="help-card">
+      <h4>오늘 화면에서 볼 수 있는 것</h4>
+      <ul>
+        <li><strong>날짜 배너</strong> — 오늘 날짜·요일이 크게 표시되고, 오늘 등록된 일정·복무·수행평가 건수를 보여줍니다.</li>
+        <li><strong>오늘 일정</strong> — 월중계획 중 오늘에 해당하는 행사</li>
+        <li><strong>오늘 복무</strong> — 오늘 출장·연가 등 복무 중인 관리자</li>
+        <li><strong>이번 주 수행평가</strong> — 오늘 기준 전후 7일 내 수행평가 일정</li>
+        <li><strong>이번 주 핵심 업무</strong> — 오늘 요일의 부서별 주간업무</li>
+      </ul>
+      <div class="help-tip">💡 별도 조작 없이 열면 자동으로 오늘 내용이 표시됩니다.</div>
+    </div>
+  </div>
+
+  <!-- 월중계획 -->
+  <div class="help-section">
+    <div class="help-section-ttl">📅 월중계획 달력</div>
+    <div class="help-card">
+      <h4>📌 일정 보기</h4>
+      <div class="help-step-row"><div class="help-step-num">1</div><div class="help-step-body">날짜 칸을 <strong>한 번 클릭</strong>하면 아래 패널에 그날 일정이 표시됩니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">2</div><div class="help-step-body">일정 항목을 클릭하면 수정·삭제할 수 있습니다.</div></div>
+    </div>
+    <div class="help-card">
+      <h4>➕ 일정 추가하기</h4>
+      <div class="help-step-row"><div class="help-step-num">1</div><div class="help-step-body">추가하고 싶은 날짜를 <strong>빠르게 두 번 클릭(더블클릭)</strong>합니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">2</div><div class="help-step-body">입력창이 뜨면 <strong>행사명</strong>을 입력하고 구분·장소·담당부서를 선택합니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">3</div><div class="help-step-body"><strong>저장</strong> 버튼을 누르면 즉시 달력에 반영됩니다.</div></div>
+      <div class="help-tip">💡 우측 상단 <strong>+ 일정 추가</strong> 버튼을 눌러도 됩니다. 날짜를 직접 선택할 수 있습니다.</div>
+    </div>
+    <div class="help-card">
+      <h4>🏷️ 일정 구분 색상</h4>
+      <ul>
+        <li><span style="background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:700;">학생</span> — 학생 대상 행사·교육활동</li>
+        <li><span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:700;">교직원</span> — 교직원 대상 행사·연수</li>
+        <li><span style="background:#ede9fe;color:#6d28d9;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:700;">학부모</span> — 학부모 대상 행사·상담</li>
+        <li><span style="background:#f3f4f6;color:#374151;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:700;">기타</span> — 그 외 일정</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 주간업무 -->
+  <div class="help-section">
+    <div class="help-section-ttl">📋 주간업무</div>
+    <div class="help-card">
+      <h4>📌 주간업무란?</h4>
+      <p>각 부서가 <strong>2주 후 업무 계획</strong>을 미리 입력하는 공간입니다. 한 주는 <strong>일요일부터 시작</strong>됩니다. 탭 상단에 입력 대상 날짜 범위가 자동으로 표시됩니다.</p>
+    </div>
+    <div class="help-card">
+      <h4>➕ 부서 업무 입력하기</h4>
+      <div class="help-step-row"><div class="help-step-num">1</div><div class="help-step-body">우측 상단 <strong>✏️ 부서업무 입력</strong> 버튼을 클릭합니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">2</div><div class="help-step-body">드롭다운에서 <strong>소속 부서를 선택</strong>합니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">3</div><div class="help-step-body">월~금 각 칸에 해당 요일 업무를 입력합니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">4</div><div class="help-step-body"><strong>저장 (실시간 반영)</strong> 버튼을 누릅니다.</div></div>
+      <div class="help-tip">💡 같은 방법으로 다시 입력하면 기존 내용이 수정됩니다.</div>
+    </div>
+  </div>
+
+  <!-- 관리자복무 -->
+  <div class="help-section">
+    <div class="help-section-ttl">🔐 관리자복무</div>
+    <div class="help-card">
+      <h4>👥 관리자 구분</h4>
+      <div class="help-admin-row">
+        <div class="help-av" style="background:linear-gradient(135deg,#1e40af,#3b82f6)">🦁</div>
+        <div class="help-admin-info"><strong>교장</strong><span>교장 선생님 복무 기록</span></div>
+      </div>
+      <div class="help-admin-row">
+        <div class="help-av" style="background:linear-gradient(135deg,#065f46,#10b981)">🐨</div>
+        <div class="help-admin-info"><strong>1캠교감</strong><span>1캠퍼스 교감 복무 기록</span></div>
+      </div>
+      <div class="help-admin-row">
+        <div class="help-av" style="background:linear-gradient(135deg,#6d28d9,#a78bfa)">🐻</div>
+        <div class="help-admin-info"><strong>2캠교감</strong><span>2캠퍼스 교감 복무 기록</span></div>
+      </div>
+      <div class="help-admin-row">
+        <div class="help-av" style="background:linear-gradient(135deg,#92400e,#f59e0b)">🐼</div>
+        <div class="help-admin-info"><strong>교감(전체)</strong><span>1·2캠교감 공통 해당 사항</span></div>
+      </div>
+    </div>
+    <div class="help-card">
+      <h4>➕ 복무 입력하기</h4>
+      <div class="help-step-row"><div class="help-step-num">1</div><div class="help-step-body">우측 상단 <strong>+ 복무 추가</strong> 버튼을 클릭합니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">2</div><div class="help-step-body">복무자·날짜·유형(출장/연가/병가 등)·사유를 입력합니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">3</div><div class="help-step-body">부재 시 업무 처리자가 있으면 <strong>대결자</strong> 칸에 이름을 입력합니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">4</div><div class="help-step-body"><strong>저장</strong> 버튼을 누릅니다.</div></div>
+    </div>
+  </div>
+
+  <!-- 수행평가 -->
+  <div class="help-section">
+    <div class="help-section-ttl">📝 수행평가</div>
+    <div class="help-card">
+      <h4>➕ 수행평가 일정 추가하기</h4>
+      <div class="help-step-row"><div class="help-step-num">1</div><div class="help-step-body">우측 상단 <strong>+ 수행평가 추가</strong> 버튼을 클릭합니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">2</div><div class="help-step-body">날짜·교과·담당교사·대상반을 입력합니다.</div></div>
+      <div class="help-step-row"><div class="help-step-num">3</div><div class="help-step-body"><strong>저장</strong> 버튼을 누릅니다.</div></div>
+      <div class="help-tip">💡 <strong>&lt; &gt;</strong> 버튼으로 다른 달의 수행평가를 확인할 수 있습니다. 항목을 클릭하면 수정·삭제가 가능합니다.</div>
+    </div>
+  </div>
+
+  <!-- 자주 묻는 질문 -->
+  <div class="help-section">
+    <div class="help-section-ttl">❓ 자주 묻는 질문</div>
+    <div class="help-card">
+      <div class="help-faq-q">Q. 데이터가 안 보여요.</div>
+      <div class="help-faq-a">상단에 <strong>🔥 실시간 동기화 중</strong>이 표시되는지 확인하세요. 표시가 안 되면 ⚙️ Firebase 설정 탭에서 <strong>저장 및 연결</strong> 버튼을 클릭하고 새로고침(F5)합니다.</div>
+
+      <div class="help-faq-q">Q. 내가 입력한 것이 다른 사람 화면에 안 보여요.</div>
+      <div class="help-faq-a">저장 버튼을 누른 뒤 상대방이 화면을 <strong>새로고침(F5)</strong> 하거나 잠시 기다리면 반영됩니다. 인터넷 연결 상태를 확인해 주세요.</div>
+
+      <div class="help-faq-q">Q. 실수로 일정을 삭제했어요.</div>
+      <div class="help-faq-a">삭제된 데이터는 복구가 어렵습니다. 다시 추가해 주세요. 중요한 데이터는 주기적으로 메모해 두시길 권장합니다.</div>
+
+      <div class="help-faq-q">Q. 새 파일을 받으면 기존 데이터가 사라지나요?</div>
+      <div class="help-faq-a">아니요. 데이터는 인터넷(Firebase)에 저장되어 있으므로 파일이 바뀌어도 데이터는 그대로 유지됩니다.</div>
+
+      <div class="help-faq-q">Q. 스마트폰이나 태블릿에서도 사용할 수 있나요?</div>
+      <div class="help-faq-a">네, v1.7부터 태블릿·스마트폰 반응형을 완전 지원합니다. 크롬 브라우저로 파일을 열면 화면 크기에 맞게 자동으로 레이아웃이 조정됩니다. 일정 추가·수정·실시간 공유도 모바일에서 동일하게 동작합니다. 단, 주간업무 표처럼 가로가 긴 화면은 좌우 스크롤로 확인하세요.</div>
+    </div>
+  </div>
+
+  <div class="help-version">areum dashboard <span id="helpVersion"></span> · 문의: 교무실 또는 정보 담당</div>
+</div>
+
+<!-- ═══════════ SCRIPT ═══════════ -->
+<script type="module">
+'use strict';
+
+// ══════════════════════════════════════════════════════
+// Firebase SDK (CDN — compat v9)
+// ══════════════════════════════════════════════════════
+import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  getDatabase, ref, set, push, remove, onValue, off
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+// ══════════════════════════════════════════════════════
+// 전역 상태
+// ══════════════════════════════════════════════════════
+let db = null;
+let fbApp = null;
+let listeners = {}; // Firebase listeners 참조 저장 (cleanup용)
+
+let allEvents  = {};  // {id: eventObj}
+let allDuty    = {};  // {id: dutyObj}
+let allPA      = {};  // {id: paObj}
+let allWeeklyData = {};  // {periodKey: {dept: entry}} — periodKey = 1주차 월요일 YYYY-MM-DD
+let viewPeriodKey = ''; // 현재 조회 중인 2주 기간의 1주차 월요일
+
+let activeTab  = 'today';
+let calYear, calMonth;
+let paCal = { year: null, month: null };
+
+const todayStr = (() => {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+})();
+const today = new Date(todayStr + 'T00:00:00');
+calYear  = today.getFullYear();
+calMonth = today.getMonth();
+paCal.year  = today.getFullYear();
+paCal.month = today.getMonth();
+
+function S2(n){ return String(n).padStart(2,'0'); }
+function fmtDateFull(ds){
+  if(!ds) return '';
+  const d = new Date(ds+'T00:00:00');
+  const DOW=['일','월','화','수','목','금','토'];
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${DOW[d.getDay()]})`;
+}
+
+// ══════════════════════════════════════════════════════
+// 버전 정보
+// ══════════════════════════════════════════════════════
+const APP_VERSION = 'v2.0';
+const APP_DATE    = '2026-07-06';
+document.addEventListener('DOMContentLoaded', () => {
+  const vEl = document.getElementById('appVersion');
+  if(vEl) vEl.textContent = APP_VERSION;
+  const hv = document.getElementById('helpVersion');
+  if(hv) hv.textContent = APP_VERSION;
+});
+
+// ══════════════════════════════════════════════════════
+// Firebase 기본 설정 (파일에 내장 — 별도 설정 불필요)
+// ══════════════════════════════════════════════════════
+const DEFAULT_FB_CONFIG = {
+  apiKey:      'AIzaSyAWDspqDUUG0hTu1-xr5zdGH9P3Fg_uLNg',
+  authDomain:  'areum-w.firebaseapp.com',
+  databaseURL: 'https://areum-w-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId:   'areum-w',
+  appId:       '1:789923416332:web:366c5b64590b6ba0ed6129'
+};
+
+// ══════════════════════════════════════════════════════
+// Firebase 초기화
+// ══════════════════════════════════════════════════════
+function loadFirebaseConfig() {
+  try {
+    const raw = localStorage.getItem('fb_config');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function initFirebase(config) {
+  try {
+    // 기존 앱 재사용 또는 새로 생성
+    if (getApps().length > 0) {
+      fbApp = getApps()[0];
+    } else {
+      fbApp = initializeApp(config);
+    }
+    db = getDatabase(fbApp);
+    updateSyncBadge('연결됨', true);
+    startListeners();
+    return true;
+  } catch(err) {
+    console.error('Firebase 초기화 실패:', err);
+    updateSyncBadge('연결 실패', false);
+    return false;
+  }
+}
+
+function updateSyncBadge(msg, ok) {
+  const el = document.getElementById('syncBadge');
+  if (el) el.textContent = '🔥 ' + msg;
+}
+
+// ══════════════════════════════════════════════════════
+// Firebase 실시간 리스너
+// ══════════════════════════════════════════════════════
+function startListeners() {
+  if (!db) return;
+
+  // 월중계획
+  const evRef = ref(db, 'monthly');
+  onValue(evRef, snap => {
+    allEvents = snap.val() || {};
+    renderTab(activeTab);
+  });
+
+  // 관리자복무
+  const dutyRef = ref(db, 'duty');
+  onValue(dutyRef, snap => {
+    allDuty = snap.val() || {};
+    renderTab(activeTab);
+  });
+
+  // 수행평가
+  const paRef = ref(db, 'pa');
+  onValue(paRef, snap => {
+    allPA = snap.val() || {};
+    renderTab(activeTab);
+  });
+
+  // 주간업무 (2주 기간 단위: /weekly/{periodKey}/{dept})
+  const wkRef = ref(db, 'weekly');
+  onValue(wkRef, snap => {
+    allWeeklyData = snap.val() || {};
+    renderTab(activeTab);
+  });
+
+  updateSyncBadge('실시간 동기화 중', true);
+}
+
+// ══════════════════════════════════════════════════════
+// 데이터 헬퍼
+// ══════════════════════════════════════════════════════
+function eventsArray() { return Object.entries(allEvents).map(([id,v])=>({...v,id})); }
+function dutyArray()   { return Object.entries(allDuty).map(([id,v])=>({...v,id})); }
+function paArray()     { return Object.entries(allPA).map(([id,v])=>({...v,id})); }
+
+function typeColor(type) {
+  if(type==='student'||type==='haksa'||type==='grade') return 'chip-student';
+  if(type==='staff') return 'chip-staff';
+  if(type==='parent') return 'chip-parent';
+  return 'chip-etc';
+}
+function typeLabel(type) {
+  if(type==='student'||type==='haksa'||type==='grade') return '학생';
+  if(type==='staff') return '교직원';
+  if(type==='parent') return '학부모';
+  return '기타';
+}
+
+// 관리자 아이콘 · 색상 헬퍼
+const PERSON_INFO = {
+  '교장':   { emoji:'🦁', bg:'linear-gradient(135deg,#1e40af,#3b82f6)', label:'교장' },
+  '1캠교감':{ emoji:'🐨', bg:'linear-gradient(135deg,#065f46,#10b981)', label:'1캠 교감' },
+  '2캠교감':{ emoji:'🐻', bg:'linear-gradient(135deg,#6d28d9,#a78bfa)', label:'2캠 교감' },
+  '교감':   { emoji:'🐼', bg:'linear-gradient(135deg,#92400e,#f59e0b)', label:'교감(전체)' },
+};
+function personEmoji(p){ return (PERSON_INFO[p]||{emoji:'👤'}).emoji; }
+function personBg(p)   { return (PERSON_INFO[p]||{bg:'#6b7280'}).bg; }
+function personLabel(p){ return (PERSON_INFO[p]||{label:p}).label; }
+
+const DEPT_COLORS = {
+  '교무부':'#1a56db','교육과정부':'#057a55','연구평가부':'#6c2bd9',
+  '학생안전자치부':'#c27803','방과후학교부':'#0694a2','글로벌인성복지부':'#e74694',
+  '스마트정보부':'#3f83f8','예술체육건강부':'#f05252','진로진학부':'#ff8a4c',
+  '행정실':'#6b7280','1학년부':'#5850ec','2학년부':'#0e9f6e','3학년부':'#e3a008'
+};
+function deptColor(d) {
+  if(!d) return '#9ca3af';
+  for(const [k,v] of Object.entries(DEPT_COLORS)) if(d.includes(k)) return v;
+  return '#9ca3af';
+}
+
+// ══════════════════════════════════════════════════════
+// 탭 전환 + 렌더링
+// ══════════════════════════════════════════════════════
+window.switchTab = function(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  renderTab(tab);
+};
+
+function renderTab(tab) {
+  if(tab==='today')    renderToday();
+  if(tab==='calendar') renderCalendar();
+  if(tab==='weekly')   renderWeekly();
+  if(tab==='duty')     renderDuty();
+  if(tab==='pa')       renderPA();
+  if(tab==='setup')    loadFbForm();
+  if(tab==='help')     {} // 정적 콘텐츠
+}
+
+// ══════════════════════════════════════════════════════
+// 오늘 탭
+// ══════════════════════════════════════════════════════
+function renderToday() {
+  // 오늘 날짜 배너
+  const DOW_FULL=['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+  const DOW_COLOR=[
+    'linear-gradient(135deg,#be123c,#f43f5e)',   // 일 — 빨강
+    'linear-gradient(135deg,#1e3a8a,#4f46e5)',   // 월
+    'linear-gradient(135deg,#065f46,#10b981)',   // 화
+    'linear-gradient(135deg,#1e40af,#3b82f6)',   // 수
+    'linear-gradient(135deg,#6d28d9,#a78bfa)',   // 목
+    'linear-gradient(135deg,#1e3a8a,#4f46e5)',   // 금
+    'linear-gradient(135deg,#1d4ed8,#0ea5e9)',   // 토 — 파랑
+  ];
+  const dow = today.getDay();
+  const evCnt  = eventsArray().filter(e=>e.start<=todayStr&&(e.end||e.start)>=todayStr).length;
+  const dutyCnt= dutyArray().filter(r=>r.date===todayStr).length;
+  const wAgo   = new Date(today); wAgo.setDate(today.getDate()-1);
+  const wLater = new Date(today); wLater.setDate(today.getDate()+6);
+  const fmtB   = d=>d.getFullYear()+'-'+S2(d.getMonth()+1)+'-'+S2(d.getDate());
+  const paCnt  = paArray().filter(p=>p.date>=fmtB(wAgo)&&p.date<=fmtB(wLater)).length;
+  const statHtml = [
+    evCnt   ? `<span class="tdb-stat">📅 일정 ${evCnt}건</span>`         : `<span class="tdb-stat none">일정 없음</span>`,
+    dutyCnt ? `<span class="tdb-stat">🔐 복무 ${dutyCnt}건</span>`       : '',
+    paCnt   ? `<span class="tdb-stat">📝 수행평가 ${paCnt}건</span>`     : '',
+  ].filter(Boolean).join('');
+  const banner = document.getElementById('todayDateBanner');
+  if(banner){
+    banner.style.background = DOW_COLOR[dow];
+    banner.innerHTML = `
+      <div class="tdb-day-wrap">
+        <span class="tdb-day">${today.getDate()}</span>
+        <span class="tdb-dow">${DOW_FULL[dow]}</span>
+      </div>
+      <div class="tdb-right">
+        <div class="tdb-ym">${today.getFullYear()}년 ${today.getMonth()+1}월</div>
+        <hr class="tdb-divider">
+        <div class="tdb-stats">${statHtml}</div>
+      </div>`;
+  }
+
+  // 오늘 일정
+  const todayEvs = eventsArray().filter(e=>e.start<=todayStr&&(e.end||e.start)>=todayStr);
+  const evEl = document.getElementById('todayEvents');
+  evEl.innerHTML = todayEvs.length
+    ? todayEvs.map(e=>`
+      <div class="ev-row" onclick="openEditEventModal('${e.id}')">
+        <span class="ev-dot" style="background:${(e.type==='student'||e.type==='haksa'||e.type==='grade')?'var(--primary)':e.type==='staff'?'var(--amber)':e.type==='parent'?'#6d28d9':'#9ca3af'}"></span>
+        <div style="flex:1;">
+          <div class="ev-title">${e.title}</div>
+          <div class="ev-cat">${e.dept?'📌'+e.dept:''} ${e.place?'📍'+e.place:''}</div>
+        </div>
+      </div>`).join('')
+    : '<div class="empty">오늘 일정 없음</div>';
+
+  // 오늘 복무
+  const todayDuty = dutyArray().filter(r=>r.date===todayStr);
+  const dutyEl = document.getElementById('todayDuty');
+  dutyEl.innerHTML = todayDuty.length
+    ? todayDuty.map(r=>`
+      <div class="duty-card" onclick="openEditDutyModal('${r.id}')">
+        <div class="duty-av" style="background:${personBg(r.person)}">${personEmoji(r.person)}</div>
+        <div>
+          <div class="duty-name">${personLabel(r.person)} — ${r.kind}</div>
+          <div class="duty-meta">${r.reason||''} ${r.deputy?'대결: '+r.deputy:''}</div>
+        </div>
+      </div>`).join('')
+    : '<div class="empty">복무 없음</div>';
+
+  // 이번 주 수행평가 (±7일)
+  const weekAgo  = new Date(today); weekAgo.setDate(weekAgo.getDate()-1);
+  const weekLater= new Date(today); weekLater.setDate(weekLater.getDate()+6);
+  const fmt = d => d.getFullYear()+'-'+S2(d.getMonth()+1)+'-'+S2(d.getDate());
+  const weekPAs  = paArray().filter(p=>p.date>=fmt(weekAgo)&&p.date<=fmt(weekLater));
+  const paEl = document.getElementById('todayPA');
+  paEl.innerHTML = weekPAs.length
+    ? weekPAs.map(p=>`
+      <div class="ev-row" onclick="openEditPAModal('${p.id}')">
+        <span class="ev-dot" style="background:var(--purple)"></span>
+        <div><div class="ev-title"><strong style="color:var(--purple)">${p.subject}</strong> ${p.classes?'· '+p.classes:''}</div>
+          <div class="ev-cat">${p.date} ${p.teacher?'👤'+p.teacher:''}</div>
+        </div>
+      </div>`).join('')
+    : '<div class="empty">이번 주 수행평가 없음</div>';
+
+  // 핵심 업무 (주간업무 중 오늘 요일에 해당하는 것)
+  const hlEl = document.getElementById('todayHighlights');
+  const todayWk = getWeeklyForDate(todayStr);
+  hlEl.innerHTML = todayWk.length
+    ? todayWk.map(({dept,task})=>`<div class="hl-item"><strong style="color:${deptColor(dept)}">${dept}</strong> · ${task}</div>`).join('')
+    : '<div class="empty">이번 주 업무 없음 (주간업무 입력 필요)</div>';
+}
+
+// ══════════════════════════════════════════════════════
+// 월중계획 달력
+// ══════════════════════════════════════════════════════
+window.prevMonth = function(){ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); };
+window.nextMonth = function(){ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); };
+
+function renderCalendar() {
+  const DOW_HDR=['일','월','화','수','목','금','토'];
+  document.getElementById('calTitle').textContent = `${calYear}년 ${calMonth+1}월`;
+
+  const firstDay = new Date(calYear,calMonth,1).getDay();
+  const lastDate = new Date(calYear,calMonth+1,0).getDate();
+  const prevLast = new Date(calYear,calMonth,0).getDate();
+
+  const evs = eventsArray();
+  const duty= dutyArray();
+  const pas = paArray();
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = DOW_HDR.map(h=>`<div class="cal-day-hdr">${h}</div>`).join('');
+
+  let cells = '';
+  // 이전 달 채우기
+  for(let i=firstDay-1;i>=0;i--){
+    cells += `<div class="cal-cell other-month"><div class="date-num">${prevLast-i}</div></div>`;
+  }
+  // 이번 달
+  for(let d=1;d<=lastDate;d++){
+    const ds = calYear+'-'+S2(calMonth+1)+'-'+S2(d);
+    const dow = new Date(calYear,calMonth,d).getDay();
+    const cls = ['cal-cell', ds===todayStr?'today':'', dow===0?'sun':dow===6?'sat':''].filter(Boolean).join(' ');
+    const dayEvs  = evs.filter(e=>e.start<=ds&&(e.end||e.start)>=ds);
+    const dayDuty = duty.filter(r=>r.date===ds);
+    const dayPAs  = pas.filter(p=>p.date===ds);
+    const chips = [
+      ...dayEvs.map(e=>`<span class="ev-chip ${typeColor(e.type)}">${e.title}</span>`),
+      ...dayDuty.map(r=>`<span class="ev-chip chip-duty">${r.person}·${r.kind}</span>`),
+      ...dayPAs.map(p=>`<span class="ev-chip chip-pa">${p.subject}</span>`)
+    ].slice(0,3).join('');
+    cells += `<div class="${cls}" onclick="showDay('${ds}')" ondblclick="openAddEventForDate('${ds}')"><div class="date-num">${d}</div>${chips}</div>`;
+  }
+  // 다음 달 채우기
+  const remain = 42 - firstDay - lastDate;
+  for(let i=1;i<=remain;i++){
+    cells += `<div class="cal-cell other-month"><div class="date-num">${i}</div></div>`;
+  }
+  grid.innerHTML += cells;
+}
+
+let selectedCalDate = null;
+
+window.showDay = function(ds) {
+  selectedCalDate = ds;
+  const btn = document.getElementById('calAddBtn');
+  if(btn) btn.style.display = 'block';
+  document.getElementById('calSelTitle').textContent = fmtDateFull(ds) + ' 일정';
+  const dayEvs  = eventsArray().filter(e=>e.start<=ds&&(e.end||e.start)>=ds);
+  const dayDuty = dutyArray().filter(r=>r.date===ds);
+  const dayPAs  = paArray().filter(p=>p.date===ds);
+  const DOW=['일','월','화','수','목','금','토'];
+  const dow = DOW[new Date(ds+'T00:00:00').getDay()];
+  const dayWk = getWeeklyForDate(ds);
+
+  const total = dayEvs.length+dayDuty.length+dayPAs.length+dayWk.length;
+  const el = document.getElementById('calSelList');
+  if(!total){ el.innerHTML='<div class="empty">이 날 일정 없음</div>'; return; }
+
+  const sec=(icon,label,color)=>
+    `<div style="font-size:11px;font-weight:800;color:${color};margin:10px 0 4px;
+      padding:3px 8px;background:${color}15;border-radius:5px;display:inline-block;">${icon} ${label}</div>`;
+  let html='';
+
+  if(dayEvs.length){
+    html+=sec('📅','월중계획','var(--primary)');
+    html+=dayEvs.map(e=>`<div class="ev-row" onclick="openEditEventModal('${e.id}')">
+      <span class="ev-dot" style="background:var(--primary)"></span>
+      <div style="flex:1;"><div class="ev-title">${e.title}</div>
+        <div class="ev-cat">${typeLabel(e.type)}${e.grade?' · '+e.grade.replace(/,/g,'·'):''} ${e.place?'📍'+e.place:''}</div>
+      </div></div>`).join('');
+  }
+  if(dayDuty.length){
+    html+=sec('🔴','관리자복무','var(--red)');
+    html+=dayDuty.map(r=>`<div class="ev-row" onclick="openEditDutyModal('${r.id}')">
+      <span class="ev-dot" style="background:var(--red)"></span>
+      <div style="flex:1;"><div class="ev-title"><strong>${r.person}</strong> — ${r.kind}</div>
+        <div class="ev-cat">${r.reason||''} ${r.deputy?'대결: '+r.deputy:''}</div>
+      </div></div>`).join('');
+  }
+  if(dayPAs.length){
+    html+=sec('📝','수행평가','var(--purple)');
+    html+=dayPAs.map(p=>`<div class="ev-row" onclick="openEditPAModal('${p.id}')">
+      <span class="ev-dot" style="background:var(--purple)"></span>
+      <div style="flex:1;"><div class="ev-title"><strong style="color:var(--purple)">${p.subject}</strong> ${p.classes?'· '+p.classes:''}</div>
+        <div class="ev-cat">${p.teacher?'👤'+p.teacher:''} ${p.memo||''}</div>
+      </div></div>`).join('');
+  }
+  if(dayWk.length){
+    html+=sec('📋',`주간업무 (${dow}요일)`,'var(--primary)');
+    html+=dayWk.map(({dept,task})=>`<div class="ev-row">
+      <span class="ev-dot" style="background:${deptColor(dept)}"></span>
+      <div><div class="ev-title"><strong style="color:${deptColor(dept)}">${dept}</strong> · ${task}</div></div>
+    </div>`).join('');
+  }
+  el.innerHTML=html;
+};
+
+// ══════════════════════════════════════════════════════
+// 주간업무
+// ══════════════════════════════════════════════════════
+const ALL_DEPTS = ['1학년부','2학년부','3학년부','교무부','교육과정부','연구평가부',
+  '학생안전자치부','방과후학교부','글로벌인성복지부','스마트정보부','진로진학부','예술체육건강부','행정실'];
+
+// 임의 날짜의 해당 주 월요일 키(YYYY-MM-DD) 반환
+function getMondayKey(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay();
+  const diff = day === 0 ? 1 : (1 - day); // 일요일→+1, 그 외→1-day
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0,10);
+}
+
+// 기본 기간 키 = 오늘 기준 2주 후 월요일
+function getDefaultPeriodKey() {
+  const d = new Date(today);
+  d.setDate(d.getDate() + 14);        // 14일 후
+  return getMondayKey(d.toISOString().slice(0,10));
+}
+
+// periodKey(월요일)로부터 2주 기간 텍스트 반환
+function periodLabel(mondayKey) {
+  const DOW=['일','월','화','수','목','금','토'];
+  const w1m = new Date(mondayKey+'T00:00:00');
+  const w1f = new Date(w1m); w1f.setDate(w1m.getDate()+4);
+  const w2m = new Date(w1m); w2m.setDate(w1m.getDate()+7);
+  const w2f = new Date(w2m); w2f.setDate(w2m.getDate()+4);
+  const fd = d=>`${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
+  return `${w1m.getFullYear()}년 ${w1m.getMonth()+1}월 &nbsp;`
+       + `1주차 ${fd(w1m)}~${fd(w1f)} &nbsp;|&nbsp; 2주차 ${fd(w2m)}~${fd(w2f)}`;
+}
+
+// mondayKey에서 n주 이동
+function shiftWeeks(mondayKey, n) {
+  const d = new Date(mondayKey+'T00:00:00');
+  d.setDate(d.getDate() + n * 7);
+  return d.toISOString().slice(0,10);
+}
+
+// ds(YYYY-MM-DD) 날짜의 주간업무 배열 [{dept, task}] 반환
+function getWeeklyForDate(ds) {
+  const DOW=['일','월','화','수','목','금','토'];
+  const dow = DOW[new Date(ds+'T00:00:00').getDay()];
+  const thisMon = getMondayKey(ds);
+  const prevMon = shiftWeeks(thisMon, -1); // 한 주 전 월요일 = 전 period의 2주차
+
+  const results = [];
+  // 이번 주가 어떤 period의 W1인지 확인
+  const p1 = allWeeklyData[thisMon] || {};
+  Object.entries(p1).forEach(([dept,v])=>{ if(v['W1'+dow]) results.push({dept,task:v['W1'+dow]}); });
+  // 이번 주가 어떤 period의 W2인지 확인 (= prevMon이 그 period의 1주차 월요일)
+  const p2 = allWeeklyData[prevMon] || {};
+  Object.entries(p2).forEach(([dept,v])=>{ if(v['W2'+dow]) results.push({dept,task:v['W2'+dow]}); });
+  return results;
+}
+
+function renderWeekly() {
+  if (!viewPeriodKey) viewPeriodKey = getDefaultPeriodKey();
+  const W1=['W1월','W1화','W1수','W1목','W1금'];
+  const W2=['W2월','W2화','W2수','W2목','W2금'];
+  const DOW=['일','월','화','수','목','금','토'];
+
+  // 내비 라벨
+  const navEl = document.getElementById('wkNavLabel');
+  if(navEl) navEl.innerHTML = periodLabel(viewPeriodKey);
+
+  // 주차 헤더 날짜 계산
+  const w1m = new Date(viewPeriodKey+'T00:00:00');
+  const w1f = new Date(w1m); w1f.setDate(w1m.getDate()+4);
+  const w2m = new Date(w1m); w2m.setDate(w1m.getDate()+7);
+  const w2f = new Date(w2m); w2f.setDate(w2m.getDate()+4);
+  const fd = d=>`${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
+  const h1 = document.getElementById('wkWeek1Header');
+  const h2 = document.getElementById('wkWeek2Header');
+  if(h1) h1.textContent = `📅 1주차  ${fd(w1m)} ~ ${fd(w1f)}`;
+  if(h2) h2.textContent = `📅 2주차  ${fd(w2m)} ~ ${fd(w2f)}`;
+
+  const data = allWeeklyData[viewPeriodKey] || {};
+
+  const makeRows = (keys, dataObj) => ALL_DEPTS.map(dept=>{
+    const e = dataObj[dept] || {};
+    const tds = keys.map(k=>`<td class="wk-task">${e[k]||''}</td>`).join('');
+    return `<tr>
+      <td class="wk-dept" style="color:${deptColor(dept)}">${dept}</td>
+      ${tds}
+      <td class="wk-task" style="color:var(--text-muted);font-size:11px;">${e.memo||''}</td>
+    </tr>`;
+  }).join('');
+
+  const t1 = document.getElementById('wkTable1Body');
+  const t2 = document.getElementById('wkTable2Body');
+  if(t1) t1.innerHTML = makeRows(W1, data);
+  if(t2) t2.innerHTML = makeRows(W2, data);
+}
+
+window.moveViewPeriod = function(dir) {
+  if(!viewPeriodKey) viewPeriodKey = getDefaultPeriodKey();
+  viewPeriodKey = shiftWeeks(viewPeriodKey, dir * 2); // 2주 단위 이동
+  renderWeekly();
+};
+window.resetViewPeriod = function() {
+  viewPeriodKey = getDefaultPeriodKey();
+  renderWeekly();
+};
+
+// ══════════════════════════════════════════════════════
+// 관리자복무
+// ══════════════════════════════════════════════════════
+function renderDuty() {
+  const persons = ['교장','1캠교감','2캠교감','교감'];
+  // 관리자 아바타 카드
+  const personEl = document.getElementById('dutyPersonList');
+  personEl.innerHTML = persons.map(p => {
+    const cnt = dutyArray().filter(r=>r.person===p).length;
+    return `<div class="duty-card" style="cursor:default;align-items:center;">
+      <div class="duty-av" style="background:${personBg(p)};width:50px;height:50px;font-size:28px;">${personEmoji(p)}</div>
+      <div>
+        <div class="duty-name">${personLabel(p)}</div>
+        <div class="duty-meta">누적 ${cnt}건</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 복무 목록 (최신순)
+  const sorted = dutyArray().sort((a,b)=>b.date.localeCompare(a.date));
+  const listEl = document.getElementById('dutyList');
+  listEl.innerHTML = sorted.length
+    ? sorted.map(r=>`
+      <div class="duty-card" onclick="openEditDutyModal('${r.id}')">
+        <div class="duty-av" style="background:${personBg(r.person)}">${personEmoji(r.person)}</div>
+        <div style="flex:1;">
+          <div class="duty-name">${personLabel(r.person)} — <span style="color:var(--red)">${r.kind}</span>
+            <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${r.date}</span>
+          </div>
+          <div class="duty-meta">${r.reason||''} ${r.from?r.from+'~'+r.to:''} ${r.deputy?'대결: '+r.deputy:''}</div>
+        </div>
+      </div>`).join('')
+    : '<div class="empty">복무 기록 없음</div>';
+}
+
+// ══════════════════════════════════════════════════════
+// 수행평가
+// ══════════════════════════════════════════════════════
+window.movePACal = function(dir){
+  paCal.month += dir;
+  if(paCal.month>11){paCal.month=0;paCal.year++;}
+  if(paCal.month<0){paCal.month=11;paCal.year--;}
+  renderPA();
+};
+
+function renderPA() {
+  const title=`${paCal.year}년 ${paCal.month+1}월`;
+  document.getElementById('paCalTitle').textContent=title;
+
+  const monthStr=`${paCal.year}-${S2(paCal.month+1)}`;
+  const monthPAs=paArray().filter(p=>p.date&&p.date.startsWith(monthStr))
+    .sort((a,b)=>a.date.localeCompare(b.date));
+
+  const grid=document.getElementById('paGrid');
+  if(!monthPAs.length){grid.innerHTML='<div class="empty">이 달 수행평가 없음</div>';return;}
+
+  // 날짜별 그룹
+  const groups={};
+  for(const p of monthPAs){
+    if(!groups[p.date]) groups[p.date]=[];
+    groups[p.date].push(p);
+  }
+
+  grid.innerHTML=Object.entries(groups).sort(([a],[b])=>a.localeCompare(b)).map(([date,pList])=>`
+    <div class="pa-card">
+      <div class="pa-date-hdr">📅 ${fmtDateFull(date)}</div>
+      ${pList.map(p=>`
+        <div class="pa-item" onclick="openEditPAModal('${p.id}')">
+          <div class="pa-dot"></div>
+          <div>
+            <div><span class="pa-subj">${p.subject}</span>${p.classes?' <span style="font-size:11px;color:var(--text-muted)">· '+p.classes+'</span>':''}</div>
+            <div class="pa-meta">${p.teacher?'👤 '+p.teacher+' ':''} ${p.memo||''}</div>
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// Firebase CRUD — 월중계획
+// ══════════════════════════════════════════════════════
+window.openAddEventForDate = function(ds) {
+  ds = ds || selectedCalDate || todayStr;
+  document.getElementById('evEditId').value='';
+  document.getElementById('evModalTitle').textContent='+ 일정 추가';
+  document.getElementById('evDate').value=ds;
+  ['evTitle','evDept','evPlace','evMemo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('evType').value='student';
+  ['evGrade1','evGrade2','evGrade3'].forEach(id=>document.getElementById(id).checked=false);
+  document.getElementById('evDeleteBtn').style.display='none';
+  openModal('addEventModal');
+};
+window.openAddEventModal = function() {
+  document.getElementById('evEditId').value='';
+  document.getElementById('evModalTitle').textContent='+ 일정 추가';
+  document.getElementById('evDate').value=todayStr;
+  ['evTitle','evDept','evPlace','evMemo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('evType').value='student';
+  ['evGrade1','evGrade2','evGrade3'].forEach(id=>document.getElementById(id).checked=false);
+  document.getElementById('evDeleteBtn').style.display='none';
+  openModal('addEventModal');
+};
+window.openEditEventModal = function(id) {
+  const ev=allEvents[id]; if(!ev) return;
+  document.getElementById('evEditId').value=id;
+  document.getElementById('evModalTitle').textContent='✏️ 일정 수정';
+  document.getElementById('evDate').value=ev.start;
+  document.getElementById('evTitle').value=ev.title;
+  document.getElementById('evType').value=ev.type||'haksa';
+  const _gs=(ev.grade||'').split(',').map(s=>s.trim());
+  ['evGrade1','evGrade2','evGrade3'].forEach(id=>{const el=document.getElementById(id);el.checked=_gs.includes(el.value);});
+  document.getElementById('evDept').value=ev.dept||'';
+  document.getElementById('evPlace').value=ev.place||'';
+  document.getElementById('evMemo').value=ev.memo||'';
+  document.getElementById('evDeleteBtn').style.display='block';
+  openModal('addEventModal');
+};
+window.saveEvent = async function() {
+  if(!db){alert('Firebase가 연결되지 않았습니다. ⚙️ Firebase 설정 탭을 확인하세요.');return;}
+  const date=document.getElementById('evDate').value;
+  const title=document.getElementById('evTitle').value.trim();
+  if(!date||!title){alert('날짜와 행사명을 입력하세요.');return;}
+  const id=document.getElementById('evEditId').value;
+  const obj={
+    start:date,end:date,title,
+    type:document.getElementById('evType').value,
+    grade:['evGrade1','evGrade2','evGrade3'].filter(id=>document.getElementById(id).checked).map(id=>document.getElementById(id).value).join(','),
+    dept:document.getElementById('evDept').value.trim(),
+    place:document.getElementById('evPlace').value.trim(),
+    memo:document.getElementById('evMemo').value.trim(),
+    updatedAt:Date.now()
+  };
+  const saveRef = id ? ref(db,'monthly/'+id) : push(ref(db,'monthly'));
+  await set(saveRef, obj);
+  closeModal('addEventModal');
+};
+window.deleteEvent = async function() {
+  if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
+  const id=document.getElementById('evEditId').value;
+  if(!id||!confirm('삭제하시겠습니까?'))return;
+  await remove(ref(db,'monthly/'+id));
+  closeModal('addEventModal');
+};
+
+// ══════════════════════════════════════════════════════
+// Firebase CRUD — 관리자복무
+// ══════════════════════════════════════════════════════
+window.openAddDutyModal = function() {
+  document.getElementById('dutyEditId').value='';
+  document.getElementById('dutyDate').value=todayStr;
+  document.getElementById('dutyPerson').value='교장';
+  document.getElementById('dutyKind').value='출장';
+  ['dutyReason','dutyFrom','dutyTo','dutyDeputy'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('dutyDeleteBtn').style.display='none';
+  openModal('addDutyModal');
+};
+window.openEditDutyModal = function(id) {
+  const r=allDuty[id]; if(!r) return;
+  document.getElementById('dutyEditId').value=id;
+  document.getElementById('dutyDate').value=r.date;
+  document.getElementById('dutyPerson').value=r.person;
+  document.getElementById('dutyKind').value=r.kind||'출장';
+  document.getElementById('dutyReason').value=r.reason||'';
+  document.getElementById('dutyFrom').value=r.from||'';
+  document.getElementById('dutyTo').value=r.to||'';
+  document.getElementById('dutyDeputy').value=r.deputy||'';
+  document.getElementById('dutyDeleteBtn').style.display='block';
+  openModal('addDutyModal');
+};
+window.saveDuty = async function() {
+  if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
+  const date=document.getElementById('dutyDate').value;
+  if(!date){alert('날짜를 입력하세요.');return;}
+  const id=document.getElementById('dutyEditId').value;
+  const obj={
+    date,person:document.getElementById('dutyPerson').value,
+    kind:document.getElementById('dutyKind').value,
+    reason:document.getElementById('dutyReason').value.trim(),
+    from:document.getElementById('dutyFrom').value.trim(),
+    to:document.getElementById('dutyTo').value.trim(),
+    deputy:document.getElementById('dutyDeputy').value.trim(),
+    updatedAt:Date.now()
+  };
+  const saveRef = id ? ref(db,'duty/'+id) : push(ref(db,'duty'));
+  await set(saveRef, obj);
+  closeModal('addDutyModal');
+};
+window.deleteDuty = async function() {
+  if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
+  const id=document.getElementById('dutyEditId').value;
+  if(!id||!confirm('삭제?'))return;
+  await remove(ref(db,'duty/'+id));
+  closeModal('addDutyModal');
+};
+
+// ══════════════════════════════════════════════════════
+// Firebase CRUD — 수행평가
+// ══════════════════════════════════════════════════════
+window.openAddPAModal = function() {
+  document.getElementById('paEditId').value='';
+  document.getElementById('paDate').value=todayStr;
+  ['paSubject','paTeacher','paMemo','paClasses'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('paDeleteBtn').style.display='none';
+  openModal('addPAModal');
+};
+window.openEditPAModal = function(id) {
+  const p=allPA[id]; if(!p) return;
+  document.getElementById('paEditId').value=id;
+  document.getElementById('paDate').value=p.date;
+  document.getElementById('paSubject').value=p.subject||'';
+  document.getElementById('paTeacher').value=p.teacher||'';
+  document.getElementById('paMemo').value=p.memo||'';
+  document.getElementById('paClasses').value=p.classes||'';
+  document.getElementById('paDeleteBtn').style.display='block';
+  openModal('addPAModal');
+};
+window.savePA = async function() {
+  if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
+  const date=document.getElementById('paDate').value;
+  const subject=document.getElementById('paSubject').value.trim();
+  if(!date||!subject){alert('날짜와 교과를 입력하세요.');return;}
+  const id=document.getElementById('paEditId').value;
+  const obj={
+    date,subject,
+    teacher:document.getElementById('paTeacher').value.trim(),
+    memo:document.getElementById('paMemo').value.trim(),
+    classes:document.getElementById('paClasses').value.trim(),
+    updatedAt:Date.now()
+  };
+  const saveRef = id ? ref(db,'pa/'+id) : push(ref(db,'pa'));
+  await set(saveRef, obj);
+  closeModal('addPAModal');
+};
+window.deletePA = async function() {
+  if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
+  const id=document.getElementById('paEditId').value;
+  if(!id||!confirm('삭제?'))return;
+  await remove(ref(db,'pa/'+id));
+  closeModal('addPAModal');
+};
+
+// ══════════════════════════════════════════════════════
+// Firebase CRUD — 주간업무 (2주 기간 단위)
+// ══════════════════════════════════════════════════════
+function updateWkModalLabel(pKey) {
+  const DOW=['일','월','화','수','목','금','토'];
+  const w1m = new Date(pKey+'T00:00:00');
+  const w1f = new Date(w1m); w1f.setDate(w1m.getDate()+4);
+  const w2m = new Date(w1m); w2m.setDate(w1m.getDate()+7);
+  const w2f = new Date(w2m); w2f.setDate(w2m.getDate()+4);
+  const fd = d=>`${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
+  const lbl = document.getElementById('wkWeekLabel');
+  if(lbl) lbl.innerHTML = `📅 1주차 ${fd(w1m)}~${fd(w1f)} &nbsp;|&nbsp; 2주차 ${fd(w2m)}~${fd(w2f)}`;
+  const mi1 = document.getElementById('wkMI1Label');
+  const mi2 = document.getElementById('wkMI2Label');
+  if(mi1) mi1.innerHTML = `1주차<br><span style="font-weight:400;color:var(--text-muted)">${fd(w1m)}~${fd(w1f)}</span>`;
+  if(mi2) mi2.innerHTML = `2주차<br><span style="font-weight:400;color:var(--text-muted)">${fd(w2m)}~${fd(w2f)}</span>`;
+}
+
+function fillWkForm(dept, pKey) {
+  const e = (allWeeklyData[pKey]||{})[dept] || {};
+  ['W1Mon','W1Tue','W1Wed','W1Thu','W1Fri','W2Mon','W2Tue','W2Wed','W2Thu','W2Fri'].forEach(k=>{
+    const el = document.getElementById('wk'+k);
+    if(el) el.value = e['W'+k[1]+(k.slice(2)==='Mon'?'월':k.slice(2)==='Tue'?'화':k.slice(2)==='Wed'?'수':k.slice(2)==='Thu'?'목':'금')] || '';
+  });
+  document.getElementById('wkMemo').value = e.memo||'';
+}
+
+window.onWkDateChange = function() {
+  const raw = document.getElementById('wkPeriodDate').value;
+  if(!raw) return;
+  const pKey = getMondayKey(raw);
+  updateWkModalLabel(pKey);
+  fillWkForm(document.getElementById('wkDeptSel').value, pKey);
+};
+
+window.openWeeklyInputModal = function() {
+  if(!viewPeriodKey) viewPeriodKey = getDefaultPeriodKey();
+  const pKey = viewPeriodKey;
+  document.getElementById('wkPeriodDate').value = pKey;
+  updateWkModalLabel(pKey);
+  const dept = document.getElementById('wkDeptSel').value;
+  fillWkForm(dept, pKey);
+  document.getElementById('wkDeptSel').onchange = function() {
+    const pk = getMondayKey(document.getElementById('wkPeriodDate').value || viewPeriodKey);
+    fillWkForm(this.value, pk);
+  };
+  openModal('weeklyInputModal');
+};
+
+window.saveWeeklyInput = async function() {
+  if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
+  const rawDate = document.getElementById('wkPeriodDate').value;
+  if(!rawDate){alert('1주차 시작일을 선택하세요.');return;}
+  const pKey = getMondayKey(rawDate);
+  const dept = document.getElementById('wkDeptSel').value;
+  const g = id => document.getElementById(id).value.trim();
+  const obj = {
+    'W1월':g('wkW1Mon'),'W1화':g('wkW1Tue'),'W1수':g('wkW1Wed'),'W1목':g('wkW1Thu'),'W1금':g('wkW1Fri'),
+    'W2월':g('wkW2Mon'),'W2화':g('wkW2Tue'),'W2수':g('wkW2Wed'),'W2목':g('wkW2Thu'),'W2금':g('wkW2Fri'),
+    memo:g('wkMemo'), updatedAt:Date.now()
+  };
+  await set(ref(db,'weekly/'+pKey+'/'+dept), obj);
+  viewPeriodKey = pKey; // 저장 후 해당 주로 이동
+  closeModal('weeklyInputModal');
+};
+
+// ══════════════════════════════════════════════════════
+// Firebase 설정
+// ══════════════════════════════════════════════════════
+function loadFbForm() {
+  const cfg=loadFirebaseConfig()||DEFAULT_FB_CONFIG;
+  document.getElementById('fb_apiKey').value    =cfg.apiKey||'';
+  document.getElementById('fb_authDomain').value=cfg.authDomain||'';
+  document.getElementById('fb_dbUrl').value     =cfg.databaseURL||'';
+  document.getElementById('fb_projectId').value =cfg.projectId||'';
+  document.getElementById('fb_appId').value     =cfg.appId||'';
+
+  const box=document.getElementById('fbStatusBox');
+  if(db) box.innerHTML='<span class="fb-status fb-ok">✅ 현재 Firebase 연결됨 (자동 연결)</span>';
+  else box.innerHTML='<span class="fb-status fb-warn">⚠️ 연결 안 됨 → 저장 및 연결 버튼 클릭</span>';
+}
+
+window.saveFirebaseConfig = function() {
+  const cfg={
+    apiKey:    document.getElementById('fb_apiKey').value.trim(),
+    authDomain:document.getElementById('fb_authDomain').value.trim(),
+    databaseURL:document.getElementById('fb_dbUrl').value.trim(),
+    projectId: document.getElementById('fb_projectId').value.trim(),
+    appId:     document.getElementById('fb_appId').value.trim()
+  };
+  if(!cfg.apiKey||!cfg.databaseURL){
+    alert('API Key와 Database URL은 필수입니다.');return;
+  }
+  localStorage.setItem('fb_config', JSON.stringify(cfg));
+  const ok=initFirebase(cfg);
+  const box=document.getElementById('fbStatusBox');
+  box.innerHTML = ok
+    ? '<span class="fb-status fb-ok">✅ 연결 성공! 실시간 동기화 시작됨</span>'
+    : '<span class="fb-status fb-err">❌ 연결 실패 — 설정 값을 다시 확인하세요</span>';
+};
+window.clearFirebaseConfig = function() {
+  if(!confirm('Firebase 설정을 초기화하시겠습니까?'))return;
+  localStorage.removeItem('fb_config');
+  localStorage.removeItem('fb_schoolName');
+  location.reload();
+};
+
+// ══════════════════════════════════════════════════════
+// 학교명
+// ══════════════════════════════════════════════════════
+window.openNameModal = function() {
+  document.getElementById('nameInput').value=
+    document.getElementById('schoolNameEl').textContent.replace(' 종합 대시보드','');
+  openModal('nameModal');
+};
+window.saveName = function() {
+  const v=document.getElementById('nameInput').value.trim();
+  if(v){
+    document.getElementById('schoolNameEl').textContent=v+' 종합 대시보드';
+    localStorage.setItem('fb_schoolName',v);
+  }
+  closeModal('nameModal');
+};
+
+// ══════════════════════════════════════════════════════
+// 모달 공통
+// ══════════════════════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+window.closeModal=closeModal;
+document.querySelectorAll('.overlay').forEach(el=>
+  el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+
+// ══════════════════════════════════════════════════════
+// 초기화
+// ══════════════════════════════════════════════════════
+(function init() {
+  // 학교명 복원
+  const savedName = localStorage.getItem('fb_schoolName');
+  if(savedName) document.getElementById('schoolNameEl').textContent=savedName+' 종합 대시보드';
+
+  // 달력 제목 초기 렌더
+  document.getElementById('calTitle').textContent = `${calYear}년 ${calMonth+1}월`;
+  document.getElementById('paCalTitle').textContent = `${paCal.year}년 ${paCal.month+1}월`;
+
+  // Firebase 자동 연결 (localStorage 우선, 없으면 내장 설정값 사용)
+  const cfg = loadFirebaseConfig() || DEFAULT_FB_CONFIG;
+  initFirebase(cfg);
+
+  renderTab('today');
+})();
+</script>
+</body>
+</html>
