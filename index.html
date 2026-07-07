@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.0                           ║
-     ║  2026-07-06                                     ║
-     ║  변경: 주간업무 2주 기간 단위 입력 (DB 구조 변경)  ║
+     ║  areum dashboard v2.2                           ║
+     ║  2026-07-07                                     ║
+     ║  변경: 주간업무 요일 체크박스 다중 선택 입력       ║
+     ║       (같은 내용을 여러 요일에 한 번에 적용)       ║
+     ║  v2.1: 날짜 계산 타임존 버그 수정                 ║
+     ║       비고 셀 모달 제목 오류 수정                 ║
+     ║  v2.0: 주간업무 일~토 1주 단위, 더블클릭 입력     ║
      ║       일정 구분 학생·교직원·학부모·기타           ║
-     ║       학년 체크박스 다중 선택                    ║
-     ║       태블릿·모바일 반응형                       ║
+     ║       학년 체크박스, 태블릿·모바일 반응형          ║
      ╚══════════════════════════════════════════════════╝ -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.0</title>
+<title>areum dashboard v2.2</title>
 <style>
 /* ═══════════════════════════════════════════════
    CSS 변수 & 리셋
@@ -101,6 +104,13 @@ textarea{resize:vertical;}
 .grade-checks{display:flex;gap:14px;align-items:center;padding:5px 0;flex-wrap:wrap;}
 .check-lbl{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text);}
 .check-lbl input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--primary);}
+.day-checks{display:flex;gap:6px;align-items:center;padding:4px 0;flex-wrap:wrap;}
+.day-check-lbl{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;font-weight:600;
+  color:var(--text-muted);background:#f3f4f6;border:1.5px solid var(--border);border-radius:6px;padding:3px 8px;
+  transition:.15s;}
+.day-check-lbl:has(input:checked){background:var(--primary-light);border-color:var(--primary);color:var(--primary);}
+.day-check-lbl input[type=checkbox]{display:none;}
+.day-check-hint{font-size:11px;color:var(--text-muted);margin-top:4px;}
 .chip-staff{background:#fef3c7;color:#92400e;}
 .chip-duty{background:#fee2e2;color:#991b1b;}
 .chip-pa{background:#ede9fe;color:#5b21b6;}
@@ -121,6 +131,10 @@ textarea{resize:vertical;}
 .wk-task{color:#374151;}
 .wk-done{text-decoration:line-through;opacity:.5;}
 .wk-chk{color:var(--green);font-size:11px;}
+.wk-cell{cursor:pointer;position:relative;}
+.wk-cell:hover{background:#eff6ff !important;}
+.wk-cell:hover::after{content:'✏️';position:absolute;top:3px;right:4px;font-size:10px;opacity:.5;}
+.wk-cell-filled{background:#f0fdf4;}
 /* ── 주간 기간 내비게이션 ── */
 .wk-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
 .wk-nav-lbl{font-weight:700;color:var(--primary);font-size:13px;flex:1;text-align:center;}
@@ -419,40 +433,32 @@ textarea{resize:vertical;}
   <div class="card">
     <div class="card-hdr">
       <div class="card-ttl">📋 주간 부서별 업무</div>
-      <button class="sbtn sbtn-p" onclick="openWeeklyInputModal()">✏️ 부서업무 입력</button>
+      <span style="font-size:11px;color:var(--text-muted);">셀 더블클릭으로 입력</span>
     </div>
     <div class="card-body">
-      <!-- 기간 내비게이션 -->
+      <!-- 주 내비게이션 -->
       <div class="wk-nav">
-        <button class="sbtn" onclick="moveViewPeriod(-1)">◀ 이전</button>
+        <button class="sbtn" onclick="moveViewWeek(-1)">◀ 이전주</button>
         <div class="wk-nav-lbl" id="wkNavLabel">—</div>
-        <button class="sbtn" onclick="moveViewPeriod(1)">다음 ▶</button>
-        <button class="sbtn" style="font-size:11px;padding:5px 10px;" onclick="resetViewPeriod()">기본주차</button>
+        <button class="sbtn" onclick="moveViewWeek(1)">다음주 ▶</button>
+        <button class="sbtn" style="font-size:11px;padding:5px 10px;" onclick="resetViewWeek()">기본주차</button>
       </div>
-      <!-- 1주차 -->
-      <div id="wkWeek1Header" class="wk-week-hdr">📅 1주차</div>
-      <div style="overflow-x:auto;margin-bottom:16px;">
-        <table class="wk-table">
-          <thead><tr>
-            <th style="min-width:90px;">부서</th>
-            <th style="min-width:110px;">월</th><th style="min-width:110px;">화</th>
-            <th style="min-width:110px;">수</th><th style="min-width:110px;">목</th>
-            <th style="min-width:110px;">금</th><th style="min-width:80px;">비고</th>
-          </tr></thead>
-          <tbody id="wkTable1Body"><tr><td colspan="7" class="empty">업무 없음</td></tr></tbody>
-        </table>
-      </div>
-      <!-- 2주차 -->
-      <div id="wkWeek2Header" class="wk-week-hdr">📅 2주차</div>
+      <!-- 주간 테이블 -->
       <div style="overflow-x:auto;">
         <table class="wk-table">
-          <thead><tr>
-            <th style="min-width:90px;">부서</th>
-            <th style="min-width:110px;">월</th><th style="min-width:110px;">화</th>
-            <th style="min-width:110px;">수</th><th style="min-width:110px;">목</th>
-            <th style="min-width:110px;">금</th><th style="min-width:80px;">비고</th>
-          </tr></thead>
-          <tbody id="wkTable2Body"><tr><td colspan="7" class="empty">업무 없음</td></tr></tbody>
+          <thead>
+            <tr id="wkTableHead">
+              <th style="min-width:90px;">부서</th>
+              <th style="min-width:100px;">월</th>
+              <th style="min-width:100px;">화</th>
+              <th style="min-width:100px;">수</th>
+              <th style="min-width:100px;">목</th>
+              <th style="min-width:100px;">금</th>
+              <th style="min-width:100px;">토</th>
+              <th style="min-width:80px;">비고</th>
+            </tr>
+          </thead>
+          <tbody id="wkTableBody"><tr><td colspan="8" class="empty">셀을 더블클릭해서 업무를 입력하세요.</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -643,49 +649,34 @@ textarea{resize:vertical;}
   </div>
 </div>
 
-<!-- 주간업무 입력 모달 -->
-<div class="overlay" id="weeklyInputModal">
-  <div class="modal" style="max-width:560px;">
-    <div class="modal-ttl">✏️ 주간업무 입력 (2주간)</div>
-    <!-- 기간 선택 -->
-    <div class="g2" style="margin-bottom:8px;">
-      <div class="form-row">
-        <label>1주차 시작일 (월요일)</label>
-        <input type="date" id="wkPeriodDate" oninput="onWkDateChange()"/>
+<!-- 주간업무 셀 입력 모달 -->
+<div class="overlay" id="wkCellModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-ttl" id="wkCellTitle">📋 업무 입력</div>
+    <input type="hidden" id="wkCellDept"/>
+    <input type="hidden" id="wkCellDay"/>
+    <div id="wkCellWeekInfo" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;"></div>
+    <div class="form-row">
+      <label>요일 선택</label>
+      <div class="day-checks">
+        <label class="day-check-lbl"><input type="checkbox" class="wkDayCheck" value="월"> 월</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkDayCheck" value="화"> 화</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkDayCheck" value="수"> 수</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkDayCheck" value="목"> 목</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkDayCheck" value="금"> 금</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkDayCheck" value="토"> 토</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkDayCheck" value="비고"> 비고</label>
       </div>
-      <div class="form-row">
-        <label>부서</label>
-        <select id="wkDeptSel">
-          <option>1학년부</option><option>2학년부</option><option>3학년부</option>
-          <option>교무부</option><option>교육과정부</option><option>연구평가부</option>
-          <option>학생안전자치부</option><option>방과후학교부</option><option>글로벌인성복지부</option>
-          <option>스마트정보부</option><option>진로진학부</option><option>예술체육건강부</option>
-          <option>행정실</option>
-        </select>
-      </div>
+      <div class="day-check-hint">여러 요일 선택 시 같은 내용이 모두 적용됩니다</div>
     </div>
-    <div id="wkWeekLabel" style="font-size:12px;color:var(--primary);font-weight:700;background:#eff6ff;padding:6px 10px;border-radius:6px;margin-bottom:12px;"></div>
-    <!-- 2주 입력 테이블 -->
-    <table class="wk-input-tbl">
-      <thead>
-        <tr>
-          <th style="width:32px;"></th>
-          <th id="wkMI1Label">1주차</th>
-          <th id="wkMI2Label">2주차</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><th>월</th><td><input class="wk-mi" id="wkW1Mon" placeholder="1주 월요일"/></td><td><input class="wk-mi" id="wkW2Mon" placeholder="2주 월요일"/></td></tr>
-        <tr><th>화</th><td><input class="wk-mi" id="wkW1Tue" placeholder="1주 화요일"/></td><td><input class="wk-mi" id="wkW2Tue" placeholder="2주 화요일"/></td></tr>
-        <tr><th>수</th><td><input class="wk-mi" id="wkW1Wed" placeholder="1주 수요일"/></td><td><input class="wk-mi" id="wkW2Wed" placeholder="2주 수요일"/></td></tr>
-        <tr><th>목</th><td><input class="wk-mi" id="wkW1Thu" placeholder="1주 목요일"/></td><td><input class="wk-mi" id="wkW2Thu" placeholder="2주 목요일"/></td></tr>
-        <tr><th>금</th><td><input class="wk-mi" id="wkW1Fri" placeholder="1주 금요일"/></td><td><input class="wk-mi" id="wkW2Fri" placeholder="2주 금요일"/></td></tr>
-      </tbody>
-    </table>
-    <div class="form-row" style="margin-top:8px;"><label>비고</label><textarea id="wkMemo" rows="2"></textarea></div>
+    <div class="form-row">
+      <label>업무 내용</label>
+      <textarea id="wkCellContent" rows="4" placeholder="업무 내용을 입력하세요"></textarea>
+    </div>
     <div class="form-actions">
-      <button class="btn btn-g" onclick="closeModal('weeklyInputModal')">취소</button>
-      <button class="btn btn-p" onclick="saveWeeklyInput()">저장 (실시간 반영)</button>
+      <button class="btn btn-r" id="wkCellDeleteBtn" style="display:none" onclick="deleteWkCell()">삭제</button>
+      <button class="btn btn-g" onclick="closeModal('wkCellModal')">취소</button>
+      <button class="btn btn-p" onclick="saveWkCell()">저장</button>
     </div>
   </div>
 </div>
@@ -862,8 +853,8 @@ let listeners = {}; // Firebase listeners 참조 저장 (cleanup용)
 let allEvents  = {};  // {id: eventObj}
 let allDuty    = {};  // {id: dutyObj}
 let allPA      = {};  // {id: paObj}
-let allWeeklyData = {};  // {periodKey: {dept: entry}} — periodKey = 1주차 월요일 YYYY-MM-DD
-let viewPeriodKey = ''; // 현재 조회 중인 2주 기간의 1주차 월요일
+let allWeeklyData = {};  // {sundayKey: {dept: entry}} — sundayKey = 해당 주 일요일 YYYY-MM-DD
+let viewWeekKey   = ''; // 현재 조회 중인 주의 일요일 키
 
 let activeTab  = 'today';
 let calYear, calMonth;
@@ -890,8 +881,8 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v2.0';
-const APP_DATE    = '2026-07-06';
+const APP_VERSION = 'v2.2';
+const APP_DATE    = '2026-07-07';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
   if(vEl) vEl.textContent = APP_VERSION;
@@ -1251,104 +1242,100 @@ window.showDay = function(ds) {
 const ALL_DEPTS = ['1학년부','2학년부','3학년부','교무부','교육과정부','연구평가부',
   '학생안전자치부','방과후학교부','글로벌인성복지부','스마트정보부','진로진학부','예술체육건강부','행정실'];
 
-// 임의 날짜의 해당 주 월요일 키(YYYY-MM-DD) 반환
-function getMondayKey(dateStr) {
+// 날짜 객체 → 'YYYY-MM-DD' (로컬 시간 기준, 타임존 오류 방지)
+function dateKey(d) { return `${d.getFullYear()}-${S2(d.getMonth()+1)}-${S2(d.getDate())}`; }
+
+// 임의 날짜의 해당 주 일요일 키(YYYY-MM-DD) 반환 (주 = 일~토)
+function getSundayKey(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
-  const day = d.getDay();
-  const diff = day === 0 ? 1 : (1 - day); // 일요일→+1, 그 외→1-day
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().slice(0,10);
+  d.setDate(d.getDate() - d.getDay()); // getDay()==0이면 그대로, 아니면 빼서 일요일로
+  return dateKey(d);
 }
 
-// 기본 기간 키 = 오늘 기준 2주 후 월요일
-function getDefaultPeriodKey() {
+// 기본 주 키 = 오늘 기준 2주 후 주의 일요일
+function getDefaultWeekKey() {
   const d = new Date(today);
-  d.setDate(d.getDate() + 14);        // 14일 후
-  return getMondayKey(d.toISOString().slice(0,10));
+  d.setDate(d.getDate() + 14);
+  return getSundayKey(dateKey(d));
 }
 
-// periodKey(월요일)로부터 2주 기간 텍스트 반환
-function periodLabel(mondayKey) {
-  const DOW=['일','월','화','수','목','금','토'];
-  const w1m = new Date(mondayKey+'T00:00:00');
-  const w1f = new Date(w1m); w1f.setDate(w1m.getDate()+4);
-  const w2m = new Date(w1m); w2m.setDate(w1m.getDate()+7);
-  const w2f = new Date(w2m); w2f.setDate(w2m.getDate()+4);
-  const fd = d=>`${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
-  return `${w1m.getFullYear()}년 ${w1m.getMonth()+1}월 &nbsp;`
-       + `1주차 ${fd(w1m)}~${fd(w1f)} &nbsp;|&nbsp; 2주차 ${fd(w2m)}~${fd(w2f)}`;
+// sundayKey로부터 주 범위 텍스트 (일~토)
+function weekLabel(sundayKey) {
+  const DOW = ['일','월','화','수','목','금','토'];
+  const sun = new Date(sundayKey + 'T00:00:00');
+  const sat = new Date(sun); sat.setDate(sun.getDate() + 6);
+  const fd = d => `${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
+  return `${sun.getFullYear()}년 ${sun.getMonth()+1}월&nbsp;&nbsp;${fd(sun)} ~ ${fd(sat)}`;
 }
 
-// mondayKey에서 n주 이동
-function shiftWeeks(mondayKey, n) {
-  const d = new Date(mondayKey+'T00:00:00');
+// sundayKey에서 n주 이동
+function shiftWeeks(sundayKey, n) {
+  const d = new Date(sundayKey + 'T00:00:00');
   d.setDate(d.getDate() + n * 7);
-  return d.toISOString().slice(0,10);
+  return dateKey(d);
 }
 
-// ds(YYYY-MM-DD) 날짜의 주간업무 배열 [{dept, task}] 반환
+// ds(YYYY-MM-DD) 날짜의 주간업무 [{dept, task}] 반환
 function getWeeklyForDate(ds) {
-  const DOW=['일','월','화','수','목','금','토'];
-  const dow = DOW[new Date(ds+'T00:00:00').getDay()];
-  const thisMon = getMondayKey(ds);
-  const prevMon = shiftWeeks(thisMon, -1); // 한 주 전 월요일 = 전 period의 2주차
-
-  const results = [];
-  // 이번 주가 어떤 period의 W1인지 확인
-  const p1 = allWeeklyData[thisMon] || {};
-  Object.entries(p1).forEach(([dept,v])=>{ if(v['W1'+dow]) results.push({dept,task:v['W1'+dow]}); });
-  // 이번 주가 어떤 period의 W2인지 확인 (= prevMon이 그 period의 1주차 월요일)
-  const p2 = allWeeklyData[prevMon] || {};
-  Object.entries(p2).forEach(([dept,v])=>{ if(v['W2'+dow]) results.push({dept,task:v['W2'+dow]}); });
-  return results;
+  const DOW = ['일','월','화','수','목','금','토'];
+  const dow = DOW[new Date(ds + 'T00:00:00').getDay()];
+  if(dow === '일') return []; // 일요일은 업무 컬럼 없음
+  const sunKey = getSundayKey(ds);
+  const weekData = allWeeklyData[sunKey] || {};
+  return Object.entries(weekData)
+    .filter(([,v]) => v[dow])
+    .map(([dept,v]) => ({dept, task: v[dow]}));
 }
 
 function renderWeekly() {
-  if (!viewPeriodKey) viewPeriodKey = getDefaultPeriodKey();
-  const W1=['W1월','W1화','W1수','W1목','W1금'];
-  const W2=['W2월','W2화','W2수','W2목','W2금'];
-  const DOW=['일','월','화','수','목','금','토'];
+  if(!viewWeekKey) viewWeekKey = getDefaultWeekKey();
+  const DOW = ['일','월','화','수','목','금','토'];
+  const DAYS = ['월','화','수','목','금','토']; // 업무 컬럼 (월~토)
 
   // 내비 라벨
   const navEl = document.getElementById('wkNavLabel');
-  if(navEl) navEl.innerHTML = periodLabel(viewPeriodKey);
+  if(navEl) navEl.innerHTML = weekLabel(viewWeekKey);
 
-  // 주차 헤더 날짜 계산
-  const w1m = new Date(viewPeriodKey+'T00:00:00');
-  const w1f = new Date(w1m); w1f.setDate(w1m.getDate()+4);
-  const w2m = new Date(w1m); w2m.setDate(w1m.getDate()+7);
-  const w2f = new Date(w2m); w2f.setDate(w2m.getDate()+4);
-  const fd = d=>`${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
-  const h1 = document.getElementById('wkWeek1Header');
-  const h2 = document.getElementById('wkWeek2Header');
-  if(h1) h1.textContent = `📅 1주차  ${fd(w1m)} ~ ${fd(w1f)}`;
-  if(h2) h2.textContent = `📅 2주차  ${fd(w2m)} ~ ${fd(w2f)}`;
+  // 테이블 헤더에 날짜 표시
+  const sun = new Date(viewWeekKey + 'T00:00:00');
+  const head = document.getElementById('wkTableHead');
+  if(head) {
+    // 월(+1)~토(+6)의 날짜 계산
+    const dateCols = DAYS.map((d,i) => {
+      const dt = new Date(sun); dt.setDate(sun.getDate() + i + 1);
+      return `<th style="min-width:100px;">${d}<br><span style="font-size:10px;font-weight:400;">${dt.getMonth()+1}/${dt.getDate()}</span></th>`;
+    });
+    head.innerHTML = `<th style="min-width:90px;">부서</th>${dateCols.join('')}<th style="min-width:80px;">비고</th>`;
+  }
 
-  const data = allWeeklyData[viewPeriodKey] || {};
-
-  const makeRows = (keys, dataObj) => ALL_DEPTS.map(dept=>{
-    const e = dataObj[dept] || {};
-    const tds = keys.map(k=>`<td class="wk-task">${e[k]||''}</td>`).join('');
-    return `<tr>
-      <td class="wk-dept" style="color:${deptColor(dept)}">${dept}</td>
-      ${tds}
-      <td class="wk-task" style="color:var(--text-muted);font-size:11px;">${e.memo||''}</td>
-    </tr>`;
-  }).join('');
-
-  const t1 = document.getElementById('wkTable1Body');
-  const t2 = document.getElementById('wkTable2Body');
-  if(t1) t1.innerHTML = makeRows(W1, data);
-  if(t2) t2.innerHTML = makeRows(W2, data);
+  const data = allWeeklyData[viewWeekKey] || {};
+  const tbody = document.getElementById('wkTableBody');
+  if(tbody) {
+    tbody.innerHTML = ALL_DEPTS.map(dept => {
+      const e = data[dept] || {};
+      const tds = DAYS.map(d => {
+        const val = e[d] || '';
+        const cls = val ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
+        return `<td class="${cls}" ondblclick="openWkCellModal('${dept}','${d}')">${val}</td>`;
+      }).join('');
+      const memoCls = e.비고 ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
+      return `<tr>
+        <td class="wk-dept" style="color:${deptColor(dept)}">${dept}</td>
+        ${tds}
+        <td class="${memoCls}" style="font-size:11px;color:var(--text-muted);"
+            ondblclick="openWkCellModal('${dept}','비고')">${e.비고||''}</td>
+      </tr>`;
+    }).join('');
+  }
 }
 
-window.moveViewPeriod = function(dir) {
-  if(!viewPeriodKey) viewPeriodKey = getDefaultPeriodKey();
-  viewPeriodKey = shiftWeeks(viewPeriodKey, dir * 2); // 2주 단위 이동
+window.moveViewWeek = function(dir) {
+  if(!viewWeekKey) viewWeekKey = getDefaultWeekKey();
+  viewWeekKey = shiftWeeks(viewWeekKey, dir); // 1주 단위 이동
   renderWeekly();
 };
-window.resetViewPeriod = function() {
-  viewPeriodKey = getDefaultPeriodKey();
+window.resetViewWeek = function() {
+  viewWeekKey = getDefaultWeekKey();
   renderWeekly();
 };
 
@@ -1593,69 +1580,55 @@ window.deletePA = async function() {
 };
 
 // ══════════════════════════════════════════════════════
-// Firebase CRUD — 주간업무 (2주 기간 단위)
+// Firebase CRUD — 주간업무 (셀 단위 입력)
 // ══════════════════════════════════════════════════════
-function updateWkModalLabel(pKey) {
-  const DOW=['일','월','화','수','목','금','토'];
-  const w1m = new Date(pKey+'T00:00:00');
-  const w1f = new Date(w1m); w1f.setDate(w1m.getDate()+4);
-  const w2m = new Date(w1m); w2m.setDate(w1m.getDate()+7);
-  const w2f = new Date(w2m); w2f.setDate(w2m.getDate()+4);
-  const fd = d=>`${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
-  const lbl = document.getElementById('wkWeekLabel');
-  if(lbl) lbl.innerHTML = `📅 1주차 ${fd(w1m)}~${fd(w1f)} &nbsp;|&nbsp; 2주차 ${fd(w2m)}~${fd(w2f)}`;
-  const mi1 = document.getElementById('wkMI1Label');
-  const mi2 = document.getElementById('wkMI2Label');
-  if(mi1) mi1.innerHTML = `1주차<br><span style="font-weight:400;color:var(--text-muted)">${fd(w1m)}~${fd(w1f)}</span>`;
-  if(mi2) mi2.innerHTML = `2주차<br><span style="font-weight:400;color:var(--text-muted)">${fd(w2m)}~${fd(w2f)}</span>`;
-}
+window.openWkCellModal = function(dept, day) {
+  if(!viewWeekKey) viewWeekKey = getDefaultWeekKey();
+  const e = (allWeeklyData[viewWeekKey] || {})[dept] || {};
+  const DOW = ['일','월','화','수','목','금','토'];
+  const sun = new Date(viewWeekKey + 'T00:00:00');
+  const sat = new Date(sun); sat.setDate(sun.getDate() + 6);
+  const fd = d => `${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
 
-function fillWkForm(dept, pKey) {
-  const e = (allWeeklyData[pKey]||{})[dept] || {};
-  ['W1Mon','W1Tue','W1Wed','W1Thu','W1Fri','W2Mon','W2Tue','W2Wed','W2Thu','W2Fri'].forEach(k=>{
-    const el = document.getElementById('wk'+k);
-    if(el) el.value = e['W'+k[1]+(k.slice(2)==='Mon'?'월':k.slice(2)==='Tue'?'화':k.slice(2)==='Wed'?'수':k.slice(2)==='Thu'?'목':'금')] || '';
-  });
-  document.getElementById('wkMemo').value = e.memo||'';
-}
+  document.getElementById('wkCellTitle').textContent  = `📋 ${dept}`;
+  document.getElementById('wkCellDept').value         = dept;
+  document.getElementById('wkCellDay').value          = day; // 최초 클릭 요일 저장
 
-window.onWkDateChange = function() {
-  const raw = document.getElementById('wkPeriodDate').value;
-  if(!raw) return;
-  const pKey = getMondayKey(raw);
-  updateWkModalLabel(pKey);
-  fillWkForm(document.getElementById('wkDeptSel').value, pKey);
+  // 요일 체크박스: 더블클릭한 요일만 체크
+  document.querySelectorAll('.wkDayCheck').forEach(cb => { cb.checked = (cb.value === day); });
+
+  document.getElementById('wkCellContent').value      = e[day] || '';
+  document.getElementById('wkCellWeekInfo').textContent = `📅 ${fd(sun)} ~ ${fd(sat)}`;
+  document.getElementById('wkCellDeleteBtn').style.display = e[day] ? 'block' : 'none';
+  openModal('wkCellModal');
 };
 
-window.openWeeklyInputModal = function() {
-  if(!viewPeriodKey) viewPeriodKey = getDefaultPeriodKey();
-  const pKey = viewPeriodKey;
-  document.getElementById('wkPeriodDate').value = pKey;
-  updateWkModalLabel(pKey);
-  const dept = document.getElementById('wkDeptSel').value;
-  fillWkForm(dept, pKey);
-  document.getElementById('wkDeptSel').onchange = function() {
-    const pk = getMondayKey(document.getElementById('wkPeriodDate').value || viewPeriodKey);
-    fillWkForm(this.value, pk);
-  };
-  openModal('weeklyInputModal');
-};
-
-window.saveWeeklyInput = async function() {
+window.saveWkCell = async function() {
   if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
-  const rawDate = document.getElementById('wkPeriodDate').value;
-  if(!rawDate){alert('1주차 시작일을 선택하세요.');return;}
-  const pKey = getMondayKey(rawDate);
-  const dept = document.getElementById('wkDeptSel').value;
-  const g = id => document.getElementById(id).value.trim();
-  const obj = {
-    'W1월':g('wkW1Mon'),'W1화':g('wkW1Tue'),'W1수':g('wkW1Wed'),'W1목':g('wkW1Thu'),'W1금':g('wkW1Fri'),
-    'W2월':g('wkW2Mon'),'W2화':g('wkW2Tue'),'W2수':g('wkW2Wed'),'W2목':g('wkW2Thu'),'W2금':g('wkW2Fri'),
-    memo:g('wkMemo'), updatedAt:Date.now()
-  };
-  await set(ref(db,'weekly/'+pKey+'/'+dept), obj);
-  viewPeriodKey = pKey; // 저장 후 해당 주로 이동
-  closeModal('weeklyInputModal');
+  const dept    = document.getElementById('wkCellDept').value;
+  const content = document.getElementById('wkCellContent').value.trim();
+  const checkedDays = [...document.querySelectorAll('.wkDayCheck:checked')].map(cb => cb.value);
+  if(checkedDays.length === 0){alert('요일을 하나 이상 선택하세요.');return;}
+  const existing = {...((allWeeklyData[viewWeekKey] || {})[dept]) || {}};
+  checkedDays.forEach(d => {
+    if(content) existing[d] = content;
+    else delete existing[d]; // 내용 없으면 해당 요일 삭제
+  });
+  existing.updatedAt = Date.now();
+  await set(ref(db, 'weekly/' + viewWeekKey + '/' + dept), existing);
+  closeModal('wkCellModal');
+};
+
+window.deleteWkCell = async function() {
+  if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
+  const dept = document.getElementById('wkCellDept').value;
+  const checkedDays = [...document.querySelectorAll('.wkDayCheck:checked')].map(cb => cb.value);
+  if(checkedDays.length === 0){alert('삭제할 요일을 선택하세요.');return;}
+  const existing = {...((allWeeklyData[viewWeekKey] || {})[dept]) || {}};
+  checkedDays.forEach(d => delete existing[d]);
+  existing.updatedAt = Date.now();
+  await set(ref(db, 'weekly/' + viewWeekKey + '/' + dept), existing);
+  closeModal('wkCellModal');
 };
 
 // ══════════════════════════════════════════════════════
