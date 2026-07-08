@@ -14,7 +14,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.2</title>
+<title>areum dashboard v2.3</title>
 <style>
 /* ═══════════════════════════════════════════════
    CSS 변수 & 리셋
@@ -347,6 +347,30 @@ textarea{resize:vertical;}
   padding:2px 6px;font-size:12px;font-family:monospace;}
 .setup-input-row{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center;margin-bottom:6px;}
 .setup-input-row label{font-size:12px;font-weight:700;color:#92400e;}
+
+/* ── 시작 페이지 설정 모달 ── */
+.sp-url-box{display:flex;gap:8px;align-items:center;background:#f8fafc;
+  border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;margin:12px 0;}
+.sp-url-text{flex:1;font-size:12px;color:var(--text-muted);font-family:monospace;
+  word-break:break-all;line-height:1.5;}
+.sp-copy-btn{flex-shrink:0;background:var(--primary);color:white;border:none;
+  border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;
+  white-space:nowrap;transition:.15s;}
+.sp-copy-btn:hover{background:#1241a0;}
+.sp-copy-btn.copied{background:var(--green);}
+.sp-steps{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
+.sp-step{display:flex;gap:12px;align-items:flex-start;}
+.sp-step-num{flex-shrink:0;width:24px;height:24px;background:var(--primary);color:white;
+  border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+.sp-step-txt{font-size:13px;line-height:1.6;padding-top:3px;}
+.sp-step-txt strong{color:var(--primary);}
+.sp-step-txt code{background:#f1f5f9;color:#1a56db;padding:1px 5px;border-radius:4px;font-size:12px;}
+.sp-tab-btns{display:flex;gap:8px;margin-bottom:14px;}
+.sp-tab-btn{padding:6px 16px;border-radius:8px;border:1.5px solid var(--border);
+  background:white;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-muted);transition:.15s;}
+.sp-tab-btn.active{background:var(--primary);color:white;border-color:var(--primary);}
+.sp-browser-section{display:none;}
+.sp-browser-section.active{display:block;}
 </style>
 </head>
 <body>
@@ -358,6 +382,7 @@ textarea{resize:vertical;}
   <span class="live-badge"><span class="live-dot"></span>실시간</span>
   <span class="sync-badge" id="syncBadge">Firebase 연결 중…</span>
   <span style="font-size:10px;color:var(--text-muted);background:#f1f5f9;border-radius:10px;padding:2px 8px;font-weight:700;" id="appVersion">v1.5</span>
+  <button class="hbtn" onclick="openStartPageModal()">🏠 시작페이지 설정</button>
   <button class="hbtn" onclick="openNameModal()">⚙ 학교명</button>
 </div>
 
@@ -681,6 +706,92 @@ textarea{resize:vertical;}
   </div>
 </div>
 
+<!-- 🏠 시작 페이지 설정 모달 -->
+<div class="overlay" id="startPageModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-ttl">🏠 시작 페이지로 설정하기</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+      아래 주소를 복사한 뒤, 브라우저 설정에서 붙여넣으면 됩니다.
+    </p>
+
+    <!-- URL 표시 + 복사 버튼 -->
+    <div class="sp-url-box">
+      <div class="sp-url-text" id="spUrlText">주소를 불러오는 중…</div>
+      <button class="sp-copy-btn" id="spCopyBtn" onclick="copyStartPageUrl()">📋 복사</button>
+    </div>
+
+    <!-- 브라우저 탭 선택 -->
+    <div class="sp-tab-btns">
+      <button class="sp-tab-btn active" id="spTabChrome" onclick="switchSpTab('chrome')">🟡 Chrome (크롬)</button>
+      <button class="sp-tab-btn" id="spTabEdge"   onclick="switchSpTab('edge')">🔵 Edge (엣지)</button>
+    </div>
+
+    <!-- 크롬 안내 -->
+    <div class="sp-browser-section active" id="spSectionChrome">
+      <div class="sp-steps">
+        <div class="sp-step">
+          <div class="sp-step-num">1</div>
+          <div class="sp-step-txt">크롬 오른쪽 위 <strong>점 3개 ⋮</strong> 클릭 → <strong>"설정"</strong> 클릭</div>
+        </div>
+        <div class="sp-step">
+          <div class="sp-step-num">2</div>
+          <div class="sp-step-txt">왼쪽 메뉴에서 <strong>"시작 시"</strong> 클릭</div>
+        </div>
+        <div class="sp-step">
+          <div class="sp-step-num">3</div>
+          <div class="sp-step-txt"><strong>"특정 페이지 또는 페이지 모음 열기"</strong> 선택</div>
+        </div>
+        <div class="sp-step">
+          <div class="sp-step-num">4</div>
+          <div class="sp-step-txt"><strong>"새 페이지 추가"</strong> 클릭 → 위 주소 <strong>붙여넣기</strong> → <strong>"추가"</strong></div>
+        </div>
+        <div class="sp-step">
+          <div class="sp-step-num">5</div>
+          <div class="sp-step-txt">크롬을 껐다가 다시 켜면 대시보드가 자동으로 열립니다 ✅</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;
+        padding:9px 13px;font-size:12px;color:#15803d;">
+        💡 또는 크롬 주소창에 <code>chrome://settings/onStartup</code> 직접 입력 후 3단계부터
+      </div>
+    </div>
+
+    <!-- 엣지 안내 -->
+    <div class="sp-browser-section" id="spSectionEdge">
+      <div class="sp-steps">
+        <div class="sp-step">
+          <div class="sp-step-num">1</div>
+          <div class="sp-step-txt">엣지 오른쪽 위 <strong>점 3개 ···</strong> 클릭 → <strong>"설정"</strong> 클릭</div>
+        </div>
+        <div class="sp-step">
+          <div class="sp-step-num">2</div>
+          <div class="sp-step-txt">왼쪽 메뉴에서 <strong>"시작, 홈 및 새 탭"</strong> 클릭</div>
+        </div>
+        <div class="sp-step">
+          <div class="sp-step-num">3</div>
+          <div class="sp-step-txt"><strong>"이 페이지들을 열기"</strong> 선택</div>
+        </div>
+        <div class="sp-step">
+          <div class="sp-step-num">4</div>
+          <div class="sp-step-txt"><strong>"새 페이지 추가"</strong> 클릭 → 위 주소 <strong>붙여넣기</strong> → <strong>"추가"</strong></div>
+        </div>
+        <div class="sp-step">
+          <div class="sp-step-num">5</div>
+          <div class="sp-step-txt">엣지를 껐다가 다시 켜면 대시보드가 자동으로 열립니다 ✅</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;
+        padding:9px 13px;font-size:12px;color:#1e40af;">
+        💡 또는 엣지 주소창에 <code>edge://settings/startHomeNTP</code> 직접 입력 후 3단계부터
+      </div>
+    </div>
+
+    <div class="form-actions" style="margin-top:16px;">
+      <button class="btn btn-g" onclick="closeModal('startPageModal')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- ❓ 사용법 -->
 <div class="page" id="page-help">
 
@@ -881,8 +992,8 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v2.2';
-const APP_DATE    = '2026-07-07';
+const APP_VERSION = 'v2.3';
+const APP_DATE    = '2026-07-08';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
   if(vEl) vEl.textContent = APP_VERSION;
@@ -1697,6 +1808,64 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 window.closeModal=closeModal;
 document.querySelectorAll('.overlay').forEach(el=>
   el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+
+// ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// 시작 페이지 설정 모달
+// ══════════════════════════════════════════════════════
+window.openStartPageModal = function() {
+  // 현재 URL 표시 (파일로 열었을 때는 GitHub Pages 주소 안내)
+  const url = location.href;
+  const isFile = url.startsWith('file://');
+  const displayUrl = isFile
+    ? '⚠️ 파일로 열려 있습니다. GitHub Pages에 올린 후 해당 주소를 사용하세요.'
+    : url.split('?')[0].split('#')[0]; // 파라미터 제거
+  document.getElementById('spUrlText').textContent = displayUrl;
+
+  // 복사 버튼 비활성화 (파일인 경우)
+  const copyBtn = document.getElementById('spCopyBtn');
+  copyBtn.disabled = isFile;
+  copyBtn.style.opacity = isFile ? '0.4' : '1';
+
+  // 브라우저 자동 감지 후 해당 탭 활성화
+  const ua = navigator.userAgent;
+  const browser = ua.includes('Edg/') ? 'edge' : 'chrome';
+  switchSpTab(browser);
+
+  openModal('startPageModal');
+};
+
+window.switchSpTab = function(browser) {
+  ['chrome','edge'].forEach(b => {
+    document.getElementById('spTab'  + b.charAt(0).toUpperCase() + b.slice(1))
+      .classList.toggle('active', b === browser);
+    document.getElementById('spSection' + b.charAt(0).toUpperCase() + b.slice(1))
+      .classList.toggle('active', b === browser);
+  });
+};
+
+window.copyStartPageUrl = async function() {
+  const url = document.getElementById('spUrlText').textContent;
+  if(url.startsWith('⚠️')) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    const btn = document.getElementById('spCopyBtn');
+    btn.textContent = '✅ 복사됨!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 복사'; btn.classList.remove('copied'); }, 2000);
+  } catch {
+    // clipboard API 실패 시 fallback
+    const ta = document.createElement('textarea');
+    ta.value = url; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.getElementById('spCopyBtn');
+    btn.textContent = '✅ 복사됨!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 복사'; btn.classList.remove('copied'); }, 2000);
+  }
+};
 
 // ══════════════════════════════════════════════════════
 // 초기화
