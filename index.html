@@ -371,6 +371,29 @@ textarea{resize:vertical;}
 .sp-tab-btn.active{background:var(--primary);color:white;border-color:var(--primary);}
 .sp-browser-section{display:none;}
 .sp-browser-section.active{display:block;}
+
+/* ── 급식 카드 ── */
+.meal-card{background:linear-gradient(135deg,#fff7ed 0%,#fffbf0 100%);
+  border:1.5px solid #fed7aa;border-radius:12px;padding:14px 16px;}
+.meal-type-badge{display:inline-block;font-size:11px;font-weight:700;
+  color:#92400e;background:#fef3c7;border-radius:20px;padding:2px 10px;margin-bottom:10px;}
+.meal-item{padding:5px 0;font-size:13px;border-bottom:1px dashed #fde8c7;line-height:1.6;
+  color:#374151;}
+.meal-item:last-child{border:none;padding-bottom:0;}
+.meal-cal{font-size:11px;color:var(--text-muted);margin-top:10px;text-align:right;
+  padding-top:8px;border-top:1px solid #fed7aa;}
+.meal-loading{text-align:center;padding:24px 16px;color:var(--text-muted);font-size:13px;}
+.meal-error{padding:12px 14px;background:#fff7ed;border:1px solid #fcd34d;
+  border-radius:8px;font-size:12px;color:#92400e;line-height:1.7;}
+
+/* ── 학교 검색 결과 ── */
+.school-result-item{padding:9px 12px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--border);margin-bottom:5px;transition:.15s;}
+.school-result-item:hover{background:var(--primary-light);border-color:var(--primary);}
+.school-result-item strong{font-size:13px;display:block;}
+.school-result-item span{font-size:11px;color:var(--text-muted);}
+.neis-search-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+.neis-search-row input{flex:1;}
 </style>
 </head>
 <body>
@@ -426,6 +449,15 @@ textarea{resize:vertical;}
   <div class="card">
     <div class="card-hdr"><div class="card-ttl">🌟 이번 주 핵심 업무</div></div>
     <div class="card-body" id="todayHighlights"><div class="empty">핵심 업무 없음</div></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-ttl">🍱 오늘의 급식</div>
+      <button class="sbtn sbtn-g" onclick="fetchMeal(true)">🔄 새로고침</button>
+    </div>
+    <div class="card-body" id="mealContent">
+      <div class="meal-loading">🔄 급식 정보 불러오는 중…</div>
+    </div>
   </div>
 </div>
 
@@ -557,6 +589,53 @@ textarea{resize:vertical;}
         같은 Firebase 프로젝트에 연결된 모든 기기에서 <strong>실시간 동기화</strong>됩니다.
       </div>
     </div>
+  </div>
+
+  <!-- NEIS 급식 API 설정 -->
+  <div class="setup-box" style="background:#f0fdf4;border-color:#6ee7b7;">
+    <h3 style="color:#065f46;">🍱 NEIS 급식 API 설정</h3>
+    <p style="font-size:12px;color:#065f46;margin-bottom:12px;">
+      나이스(NEIS) 오픈 API를 이용해 오늘 급식 정보를 자동으로 불러옵니다.<br>
+      학교를 검색해 선택하고 <strong>저장</strong>을 클릭하세요.
+    </p>
+
+    <!-- 학교 검색 -->
+    <div class="setup-input-row" style="grid-template-columns:140px 1fr;">
+      <label style="color:#065f46;">학교 검색</label>
+      <div>
+        <div class="neis-search-row">
+          <input id="neis_search" placeholder="예: 아름중" onkeydown="if(event.key==='Enter')searchSchool()"/>
+          <button class="btn btn-p" style="white-space:nowrap;padding:7px 14px;" onclick="searchSchool()">🔍 검색</button>
+        </div>
+        <div id="neisSearchResult"></div>
+      </div>
+    </div>
+
+    <!-- 선택된 학교 정보 (hidden) -->
+    <input type="hidden" id="neis_atptCode"/>
+    <input type="hidden" id="neis_schulCode"/>
+
+    <div class="setup-input-row" style="grid-template-columns:140px 1fr;margin-top:8px;">
+      <label style="color:#065f46;">선택된 학교</label>
+      <input id="neis_schulName" placeholder="학교 검색 후 선택하세요" readonly
+        style="background:#f9fafb;cursor:default;"/>
+    </div>
+
+    <!-- API 키 (선택) -->
+    <div class="setup-input-row" style="grid-template-columns:140px 1fr;margin-top:4px;">
+      <label style="color:#065f46;">API 키 <span style="font-weight:400;">(선택)</span></label>
+      <input id="neis_apiKey" placeholder="없으면 비워두세요 (체험 키 사용)"/>
+    </div>
+    <div style="font-size:11px;color:#047857;margin:-4px 0 10px 0;padding-left:148px;line-height:1.6;">
+      ※ API 키가 없으면 체험 키로 동작합니다 (하루 1,000건 제한).<br>
+      무제한 사용은 <a href="https://open.neis.go.kr" target="_blank" style="color:#065f46;font-weight:700;">open.neis.go.kr</a>에서 무료 발급하세요.
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-p" style="background:#059669;" onclick="saveNeisConfig()">💾 저장</button>
+      <button class="btn btn-g" onclick="clearNeisConfig()">🗑 초기화</button>
+    </div>
+    <div id="neisStatusBox" style="margin-top:8px;"></div>
   </div>
 </div>
 
@@ -1009,8 +1088,8 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v2.4';
-const APP_DATE    = '2026-07-08';
+const APP_VERSION = 'v2.5';
+const APP_DATE    = '2026-07-09';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
   if(vEl) vEl.textContent = APP_VERSION;
@@ -1160,7 +1239,7 @@ function renderTab(tab) {
   if(tab==='weekly')   renderWeekly();
   if(tab==='duty')     renderDuty();
   if(tab==='pa')       renderPA();
-  if(tab==='setup')    loadFbForm();
+  if(tab==='setup')    { loadFbForm(); loadNeisFbForm(); }
   if(tab==='help')     {} // 정적 콘텐츠
 }
 
@@ -1256,6 +1335,9 @@ function renderToday() {
   hlEl.innerHTML = todayWk.length
     ? todayWk.map(({dept,task})=>`<div class="hl-item"><strong style="color:${deptColor(dept)}">${dept}</strong> · ${task}</div>`).join('')
     : '<div class="empty">이번 주 업무 없음 (주간업무 입력 필요)</div>';
+
+  // 급식
+  fetchMeal(false);
 }
 
 // ══════════════════════════════════════════════════════
@@ -1828,6 +1910,174 @@ document.querySelectorAll('.overlay').forEach(el=>
 
 // ══════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════
+// NEIS 급식 API
+// ══════════════════════════════════════════════════════
+let neisConfig = {};
+let mealCache  = {};
+let _schoolRows = []; // 학교 검색 결과 임시 저장
+
+function loadNeisConfig() {
+  try {
+    const raw = localStorage.getItem('neis_config');
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+function loadNeisFbForm() {
+  const c = neisConfig;
+  const keyEl   = document.getElementById('neis_apiKey');
+  const atptEl  = document.getElementById('neis_atptCode');
+  const schulEl = document.getElementById('neis_schulCode');
+  const nameEl  = document.getElementById('neis_schulName');
+  if(keyEl)   keyEl.value   = c.apiKey   || '';
+  if(atptEl)  atptEl.value  = c.atptCode || '';
+  if(schulEl) schulEl.value = c.schulCode|| '';
+  if(nameEl)  nameEl.value  = c.schulName|| '';
+  if(c.schulName) {
+    const r = document.getElementById('neisSearchResult');
+    if(r) r.innerHTML = `<div style="padding:7px 10px;background:#f0fdf4;border-radius:7px;font-size:12px;color:#065f46;">✅ 현재 설정: <strong>${c.schulName}</strong></div>`;
+  }
+}
+
+window.saveNeisConfig = async function() {
+  const apiKey    = (document.getElementById('neis_apiKey')?.value  || '').trim();
+  const atptCode  = (document.getElementById('neis_atptCode')?.value|| '').trim();
+  const schulCode = (document.getElementById('neis_schulCode')?.value||'').trim();
+  const schulName = (document.getElementById('neis_schulName')?.value||'').trim();
+  if(!atptCode || !schulCode) { alert('학교를 검색하여 선택하세요.'); return; }
+  neisConfig = { apiKey, atptCode, schulCode, schulName };
+  localStorage.setItem('neis_config', JSON.stringify(neisConfig));
+  mealCache = {};
+  const sb = document.getElementById('neisStatusBox');
+  if(sb) sb.innerHTML = '<span style="color:#059669;font-size:12px;font-weight:700;">✅ 저장 완료! 급식 정보를 다시 불러옵니다.</span>';
+  await fetchMeal(true);
+};
+
+window.clearNeisConfig = function() {
+  if(!confirm('급식 설정을 초기화하시겠습니까?')) return;
+  localStorage.removeItem('neis_config');
+  neisConfig = {};
+  mealCache  = {};
+  ['neis_apiKey','neis_atptCode','neis_schulCode','neis_schulName'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const r = document.getElementById('neisSearchResult');
+  if(r) r.innerHTML = '';
+  const sb = document.getElementById('neisStatusBox');
+  if(sb) sb.innerHTML = '<span style="color:#92400e;font-size:12px;">🗑 초기화되었습니다.</span>';
+  renderMeal(null,'미설정');
+};
+
+window.searchSchool = async function() {
+  const name = (document.getElementById('neis_search')?.value || '').trim();
+  if(!name) { alert('학교명을 입력하세요. 예) 아름중'); return; }
+  const r = document.getElementById('neisSearchResult');
+  if(!r) return;
+  r.innerHTML = '<div class="meal-loading" style="padding:10px;">🔍 검색 중…</div>';
+  try {
+    const url = 'https://open.neis.go.kr/hub/schoolInfo?KEY=demo&Type=json'
+              + '&SCHUL_NM=' + encodeURIComponent(name)
+              + '&SCHUL_KND_SC_NM=' + encodeURIComponent('중학교');
+    const res  = await fetch(url);
+    const data = await res.json();
+    const rows = data?.schoolInfo?.[1]?.row || [];
+    if(!rows.length) {
+      r.innerHTML = '<div class="meal-error">검색 결과 없음. 학교명을 다시 확인하세요.</div>';
+      return;
+    }
+    // 인덱스로 참조 (학교명에 특수문자가 있어도 안전)
+    _schoolRows = rows.slice(0, 6);
+    r.innerHTML = _schoolRows.map((s, i) => `
+      <div class="school-result-item" onclick="selectSchool(${i})">
+        <strong>${s.SCHUL_NM}</strong>
+        <span>${s.LCTN_SC_NM || ''} · ${s.ORG_RDNMA || ''}</span>
+      </div>`).join('');
+  } catch(e) {
+    r.innerHTML = '<div class="meal-error">⚠️ 검색 오류. 잠시 후 다시 시도하세요.</div>';
+  }
+};
+
+window.selectSchool = function(idx) {
+  const s = _schoolRows[idx];
+  if(!s) return;
+  const atptEl  = document.getElementById('neis_atptCode');
+  const schulEl = document.getElementById('neis_schulCode');
+  const nameEl  = document.getElementById('neis_schulName');
+  if(atptEl)  atptEl.value  = s.ATPT_OFCDC_SC_CODE;
+  if(schulEl) schulEl.value = s.SD_SCHUL_CODE;
+  if(nameEl)  nameEl.value  = s.SCHUL_NM;
+  const r = document.getElementById('neisSearchResult');
+  if(r) r.innerHTML = `<div style="padding:8px 10px;background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;font-size:12px;color:#065f46;margin-top:4px;">✅ 선택됨: <strong>${s.SCHUL_NM}</strong> (${s.LCTN_SC_NM || ''})</div>`;
+};
+
+window.fetchMeal = async function(force = false) {
+  const el = document.getElementById('mealContent');
+  if(!el) return;
+  if(!neisConfig.atptCode || !neisConfig.schulCode) {
+    renderMeal(null, '미설정');
+    return;
+  }
+  const yyyymmdd = todayStr.replace(/-/g,'');
+  if(!force && mealCache[yyyymmdd]) { renderMeal(mealCache[yyyymmdd]); return; }
+  renderMeal(null,'loading');
+  try {
+    const key = neisConfig.apiKey || 'demo';
+    const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?KEY=${key}&Type=json`
+              + `&ATPT_OFCDC_SC_CODE=${neisConfig.atptCode}`
+              + `&SD_SCHUL_CODE=${neisConfig.schulCode}`
+              + `&MLSV_YMD=${yyyymmdd}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    // RESULT 코드가 INFO-200이면 데이터 없음
+    if(data?.RESULT?.CODE === 'INFO-200') { renderMeal([]); return; }
+    const rows = data?.mealServiceDietInfo?.[1]?.row;
+    if(!rows) { renderMeal([]); return; }
+    mealCache[yyyymmdd] = rows;
+    renderMeal(rows);
+  } catch(e) {
+    renderMeal(null,'error');
+  }
+};
+
+function renderMeal(rows, state) {
+  const el = document.getElementById('mealContent');
+  if(!el) return;
+  if(state === 'loading') {
+    el.innerHTML = '<div class="meal-loading">🔄 급식 정보 불러오는 중…</div>';
+    return;
+  }
+  if(state === '미설정') {
+    el.innerHTML = `<div class="meal-error">
+      ⚙️ 급식 정보를 보려면 <strong>⚙️ Firebase 설정</strong> 탭 하단의
+      <strong>🍱 NEIS 급식 API 설정</strong>에서 학교를 등록하세요.
+    </div>`;
+    return;
+  }
+  if(state === 'error') {
+    el.innerHTML = '<div class="meal-error">⚠️ 급식 정보를 불러오지 못했습니다. 잠시 후 🔄 새로고침 버튼을 눌러주세요.</div>';
+    return;
+  }
+  if(!rows || rows.length === 0) {
+    el.innerHTML = '<div class="empty">오늘 급식 정보가 없습니다.</div>';
+    return;
+  }
+  // 중식(점심) 우선, 없으면 첫 번째
+  const lunch = rows.find(r => r.MMEAL_SC_NM === '중식') || rows[0];
+  // 메뉴 파싱 — 알레르기 번호 제거, <br/> 분리
+  const dishes = (lunch.DDISH_NM || '')
+    .split('<br/>')
+    .map(d => d.replace(/\s*[\d.]+\s*/g,'').trim())
+    .filter(Boolean);
+  el.innerHTML = `
+    <div class="meal-card">
+      <div class="meal-type-badge">${lunch.MMEAL_SC_NM} · ${todayStr.slice(5).replace('-','/')}</div>
+      ${dishes.map(d=>`<div class="meal-item">🍽 ${d}</div>`).join('')}
+      ${lunch.CAL_INFO ? `<div class="meal-cal">🔥 열량 ${lunch.CAL_INFO}</div>` : ''}
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
 // 시작 페이지 설정 모달
 // ══════════════════════════════════════════════════════
 window.openStartPageModal = function() {
@@ -1931,6 +2181,9 @@ window.copyStartPageUrl = async function() {
   // 달력 제목 초기 렌더
   document.getElementById('calTitle').textContent = `${calYear}년 ${calMonth+1}월`;
   document.getElementById('paCalTitle').textContent = `${paCal.year}년 ${paCal.month+1}월`;
+
+  // NEIS 설정 복원
+  neisConfig = loadNeisConfig();
 
   // Firebase 자동 연결 (localStorage 우선, 없으면 내장 설정값 사용)
   const cfg = loadFirebaseConfig() || DEFAULT_FB_CONFIG;
