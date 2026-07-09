@@ -2022,8 +2022,11 @@ window.searchSchool = async function() {
   if(!r) return;
   r.innerHTML = '<div class="meal-loading" style="padding:10px;">🔍 검색 중…</div>';
   try {
+    // 입력된 API 키 우선, 없으면 저장된 키 사용
+    const apiKey = (document.getElementById('neis_apiKey')?.value || '').trim()
+                || neisConfig.apiKey || 'demo';
     // 학교 유형 필터 없이 전체 검색 (더 넓게 찾음)
-    const url = 'https://open.neis.go.kr/hub/schoolInfo?KEY=demo&Type=json&pSize=10'
+    const url = 'https://open.neis.go.kr/hub/schoolInfo?KEY=' + encodeURIComponent(apiKey) + '&Type=json&pSize=10'
               + '&SCHUL_NM=' + encodeURIComponent(name);
     const res  = await fetch(url);
     const data = await res.json();
