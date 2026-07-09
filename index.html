@@ -661,11 +661,25 @@ textarea{resize:vertical;}
       무제한 사용은 <a href="https://open.neis.go.kr" target="_blank" style="color:#065f46;font-weight:700;">open.neis.go.kr</a>에서 무료 발급하세요.
     </div>
 
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-p" style="background:#059669;" onclick="saveNeisConfig()">💾 저장</button>
       <button class="btn btn-g" onclick="clearNeisConfig()">🗑 초기화</button>
     </div>
     <div id="neisStatusBox" style="margin-top:8px;"></div>
+
+    <!-- 급식 Firebase 등록 -->
+    <div style="border-top:1.5px solid #6ee7b7;margin-top:16px;padding-top:14px;">
+      <div style="font-size:13px;font-weight:800;color:#065f46;margin-bottom:6px;">🍱 오늘 급식 일괄 등록</div>
+      <div style="font-size:12px;color:#374151;line-height:1.7;margin-bottom:10px;">
+        아래 버튼을 누르면 NEIS에서 오늘 급식을 가져와 <strong>Firebase에 저장</strong>합니다.<br>
+        저장 후 <strong>모든 선생님 기기</strong>에서 자동으로 급식이 표시됩니다. (별도 설정 불필요)
+      </div>
+      <button id="mealPushBtn" class="btn btn-p" style="background:#059669;width:100%;font-size:13px;"
+        onclick="pushMealToFirebase()">
+        🍱 오늘 급식 NEIS에서 가져와 Firebase 등록
+      </button>
+      <div id="mealPushStatus" style="margin-top:8px;"></div>
+    </div>
   </div>
 </div>
 
@@ -1091,6 +1105,8 @@ let allEvents  = {};  // {id: eventObj}
 let allDuty    = {};  // {id: dutyObj}
 let allPA      = {};  // {id: paObj}
 let allWeeklyData = {};  // {sundayKey: {dept: entry}} — sundayKey = 해당 주 일요일 YYYY-MM-DD
+let allMeal       = {};  // {YYYYMMDD: {type, dishes[], cal, registeredAt}}
+let _mealAutoPushing = false; // 자동 등록 중복 방지 플래그
 let viewWeekKey   = ''; // 현재 조회 중인 주의 일요일 키
 
 let activeTab  = 'today';
@@ -1118,7 +1134,7 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v2.5';
+const APP_VERSION = 'v2.6';
 const APP_DATE    = '2026-07-09';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
@@ -1204,6 +1220,13 @@ function startListeners() {
   onValue(wkRef, snap => {
     allWeeklyData = snap.val() || {};
     renderTab(activeTab);
+  });
+
+  // 급식 (Firebase 서버 등록 방식: /meal/{YYYYMMDD})
+  const mealRef = ref(db, 'meal');
+  onValue(mealRef, snap => {
+    allMeal = snap.val() || {};
+    if(activeTab === 'today') renderMealSection();
   });
 
   updateSyncBadge('실시간 동기화 중', true);
@@ -1366,8 +1389,8 @@ function renderToday() {
     ? todayWk.map(({dept,task})=>`<div class="hl-item"><strong style="color:${deptColor(dept)}">${dept}</strong> · ${task}</div>`).join('')
     : '<div class="empty">이번 주 업무 없음 (주간업무 입력 필요)</div>';
 
-  // 급식
-  fetchMeal(false);
+  // 급식 (Firebase 데이터 우선)
+  renderMealSection();
 }
 
 // ══════════════════════════════════════════════════════
@@ -2077,6 +2100,100 @@ window.selectSchool = function(idx) {
   if(nameEl)  nameEl.value  = s.SCHUL_NM;
   const r = document.getElementById('neisSearchResult');
   if(r) r.innerHTML = `<div style="padding:8px 10px;background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;font-size:12px;color:#065f46;margin-top:4px;">✅ 선택됨: <strong>${s.SCHUL_NM}</strong> (${s.LCTN_SC_NM || ''})</div>`;
+};
+
+// Firebase에 저장된 급식 렌더 (모든 기기 공통) + NEIS 설정 있으면 자동 등록
+function renderMealSection() {
+  const el = document.getElementById('mealContent');
+  if(!el) return;
+  const yyyymmdd = todayStr.replace(/-/g,'');
+  const m = allMeal[yyyymmdd];
+
+  if(m && m.dishes && m.dishes.length) {
+    // Firebase에 데이터 있음 → 표시
+    const reg = m.registeredAt
+      ? new Date(m.registeredAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
+    el.innerHTML = `
+      <div class="meal-card">
+        <div class="meal-type-badge">${m.type || '중식'} · ${todayStr.slice(5).replace('-','/')}</div>
+        ${m.dishes.map(d=>`<div class="meal-item">🍽 ${d}</div>`).join('')}
+        ${m.cal ? `<div class="meal-cal">🔥 열량 ${m.cal}</div>` : ''}
+        ${reg ? `<div style="font-size:10px;color:#9ca3af;text-align:right;margin-top:4px;">자동 등록 ${reg}</div>` : ''}
+      </div>`;
+  } else if(neisConfig.atptCode && neisConfig.schulCode && !_mealAutoPushing) {
+    // NEIS 설정 완료 + Firebase 미등록 → 자동 push
+    _mealAutoPushing = true;
+    el.innerHTML = '<div class="meal-loading">🔄 급식 자동 불러오는 중…</div>';
+    window.pushMealToFirebase(true).finally(() => { _mealAutoPushing = false; });
+  } else if(_mealAutoPushing) {
+    el.innerHTML = '<div class="meal-loading">🔄 급식 자동 불러오는 중…</div>';
+  } else {
+    // NEIS 미설정 → 안내 메시지
+    el.innerHTML = `<div class="meal-error">
+      🍱 오늘 급식이 아직 등록되지 않았습니다.<br>
+      <strong>⚙️ Firebase 설정</strong> 탭 → <strong>🍱 오늘 급식 일괄 등록</strong> 버튼을 눌러주세요.
+    </div>`;
+  }
+}
+
+// NEIS → Firebase 급식 일괄 등록 (관리자 전용)
+// silent=true : 자동 호출 시 alert 없이 조용히 실행
+window.pushMealToFirebase = async function(silent = false) {
+  if(!db) { if(!silent) alert('Firebase가 연결되지 않았습니다.'); return; }
+  if(!neisConfig.atptCode || !neisConfig.schulCode) {
+    if(!silent) alert('먼저 NEIS 급식 API 설정에서 학교를 선택하고 저장하세요.');
+    return;
+  }
+  const btn = document.getElementById('mealPushBtn');
+  const sb  = document.getElementById('mealPushStatus');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ NEIS에서 불러오는 중…'; }
+  if(sb)  sb.innerHTML = '';
+  try {
+    const apiKey   = neisConfig.apiKey || 'demo';
+    const yyyymmdd = todayStr.replace(/-/g,'');
+    const url = 'https://open.neis.go.kr/hub/mealServiceDietInfo'
+              + '?KEY=' + encodeURIComponent(apiKey)
+              + '&Type=json'
+              + '&ATPT_OFCDC_SC_CODE=' + neisConfig.atptCode
+              + '&SD_SCHUL_CODE='      + neisConfig.schulCode
+              + '&MLSV_YMD='           + yyyymmdd;
+    const res  = await fetch(url);
+    const data = await res.json();
+    if(data?.RESULT) {
+      throw new Error(data.RESULT.CODE + ': ' + data.RESULT.MESSAGE);
+    }
+    const rows = data?.mealServiceDietInfo?.[1]?.row;
+    if(!rows || !rows.length) {
+      if(sb) sb.innerHTML = '<span style="color:#d97706;font-size:12px;">오늘 급식 정보가 없습니다.</span>';
+      // 자동 호출 시 "급식 없음" 메시지 렌더
+      if(silent) {
+        const el = document.getElementById('mealContent');
+        if(el) el.innerHTML = '<div class="meal-error">🍱 오늘 급식 정보가 없습니다. (방학/공휴일)</div>';
+      }
+      return;
+    }
+    const lunch  = rows.find(r => r.MMEAL_SC_NM === '중식') || rows[0];
+    const dishes = (lunch.DDISH_NM || '').split('<br/>')
+      .map(d => d.replace(/\s*[\d.]+\s*/g,'').trim()).filter(Boolean);
+    await set(ref(db, 'meal/' + yyyymmdd), {
+      type: lunch.MMEAL_SC_NM || '중식',
+      dishes,
+      cal: lunch.CAL_INFO || '',
+      date: yyyymmdd,
+      registeredAt: Date.now()
+    });
+    if(sb) sb.innerHTML = `<span style="color:#059669;font-size:12px;font-weight:700;">✅ Firebase 등록 완료! 모든 기기에 급식이 표시됩니다.</span>`;
+    // Firebase onValue가 allMeal 갱신 → renderMealSection 자동 재호출됨
+  } catch(e) {
+    if(!silent) {
+      if(sb) sb.innerHTML = `<span style="color:#dc2626;font-size:12px;">⚠️ 오류: ${e.message}</span>`;
+    } else {
+      const el = document.getElementById('mealContent');
+      if(el) el.innerHTML = `<div class="meal-error">⚠️ 급식 자동 등록 실패: ${e.message}<br><strong>⚙️ Firebase 설정</strong> 탭에서 수동으로 등록하세요.</div>`;
+    }
+  } finally {
+    if(btn) { btn.disabled = false; btn.textContent = '🍱 오늘 급식 NEIS에서 가져와 Firebase 등록'; }
+  }
 };
 
 window.applyDirectCode = function() {
