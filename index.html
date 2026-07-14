@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.2                           ║
-     ║  2026-07-07                                     ║
-     ║  변경: 주간업무 요일 체크박스 다중 선택 입력       ║
-     ║       (같은 내용을 여러 요일에 한 번에 적용)       ║
-     ║  v2.1: 날짜 계산 타임존 버그 수정                 ║
-     ║       비고 셀 모달 제목 오류 수정                 ║
-     ║  v2.0: 주간업무 일~토 1주 단위, 더블클릭 입력     ║
-     ║       일정 구분 학생·교직원·학부모·기타           ║
-     ║       학년 체크박스, 태블릿·모바일 반응형          ║
+     ║  areum dashboard v2.6                           ║
+     ║  2026-07-09                                     ║
+     ║  v2.6: 관리자복무 기간 지정 기능 추가            ║
+     ║       시작일~종료일 범위로 오늘·달력 전체 적용   ║
+     ║       NEIS 급식 자동 등록 (페이지 열 때 자동)    ║
+     ║  v2.5: NEIS 급식 API 연동, Firebase 일괄 등록    ║
+     ║       학교 검색 API키 적용, 저장 로직 개선        ║
+     ║  v2.3: Firebase 내장 설정, 스쿨위클리 리브랜딩   ║
+     ║  v2.2: 주간업무 요일 체크박스 다중 선택 입력      ║
      ╚══════════════════════════════════════════════════╝ -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.3</title>
+<title>areum dashboard v2.6</title>
 <style>
 /* ═══════════════════════════════════════════════
    CSS 변수 & 리셋
@@ -743,16 +743,15 @@ textarea{resize:vertical;}
   <div class="modal">
     <div class="modal-ttl">🔐 관리자복무 입력</div>
     <input type="hidden" id="dutyEditId">
+    <!-- 누가 -->
     <div class="g2">
-      <div class="form-row"><label>날짜</label><input type="date" id="dutyDate"/></div>
       <div class="form-row">
         <label>복무자</label>
         <select id="dutyPerson">
           <option>교장</option><option>1캠교감</option><option>2캠교감</option><option>교감</option>
         </select>
       </div>
-    </div>
-    <div class="g2">
+      <!-- 무엇을 -->
       <div class="form-row">
         <label>복무유형</label>
         <select id="dutyKind">
@@ -760,12 +759,22 @@ textarea{resize:vertical;}
           <option>공가</option><option>특별휴가</option><option>기타</option>
         </select>
       </div>
-      <div class="form-row"><label>사유</label><input id="dutyReason" placeholder="사유 입력"/></div>
     </div>
+    <!-- 언제 (일자) -->
+    <div class="g2">
+      <div class="form-row"><label>시작일</label><input type="date" id="dutyStartDate"/></div>
+      <div class="form-row"><label>종료일</label><input type="date" id="dutyEndDate"/></div>
+    </div>
+    <!-- 몇시에 -->
     <div class="g2">
       <div class="form-row"><label>시작시간</label><input id="dutyFrom" placeholder="09:00"/></div>
       <div class="form-row"><label>종료시간</label><input id="dutyTo" placeholder="18:00"/></div>
     </div>
+    <!-- 어디를 -->
+    <div class="form-row"><label>장소</label><input id="dutyPlace" placeholder="출장지·장소 입력"/></div>
+    <!-- 왜 -->
+    <div class="form-row"><label>사유</label><input id="dutyReason" placeholder="사유 입력"/></div>
+    <!-- 대결자 -->
     <div class="form-row"><label>대결자</label><input id="dutyDeputy" placeholder="대결자 이름"/></div>
     <div class="form-actions">
       <button class="btn btn-r" id="dutyDeleteBtn" style="display:none" onclick="deleteDuty()">삭제</button>
@@ -1237,6 +1246,18 @@ function startListeners() {
 // ══════════════════════════════════════════════════════
 function eventsArray() { return Object.entries(allEvents).map(([id,v])=>({...v,id})); }
 function dutyArray()   { return Object.entries(allDuty).map(([id,v])=>({...v,id})); }
+// 복무 기간 범위 체크 (기존 단일 날짜 레코드 하위 호환)
+function dutyInDate(r, ds) {
+  const start = r.date;
+  const end   = r.endDate || r.date;
+  return ds >= start && ds <= end;
+}
+// 복무 날짜 표시 레이블
+function dutyDateLabel(r) {
+  return (r.endDate && r.endDate !== r.date)
+    ? `${r.date.slice(5).replace('-','/')} ~ ${r.endDate.slice(5).replace('-','/')}`
+    : r.date.slice(5).replace('-','/');
+}
 function paArray()     { return Object.entries(allPA).map(([id,v])=>({...v,id})); }
 
 function typeColor(type) {
@@ -1313,7 +1334,7 @@ function renderToday() {
   ];
   const dow = today.getDay();
   const evCnt  = eventsArray().filter(e=>e.start<=todayStr&&(e.end||e.start)>=todayStr).length;
-  const dutyCnt= dutyArray().filter(r=>r.date===todayStr).length;
+  const dutyCnt= dutyArray().filter(r=>dutyInDate(r,todayStr)).length;
   const wAgo   = new Date(today); wAgo.setDate(today.getDate()-1);
   const wLater = new Date(today); wLater.setDate(today.getDate()+6);
   const fmtB   = d=>d.getFullYear()+'-'+S2(d.getMonth()+1)+'-'+S2(d.getDate());
@@ -1353,7 +1374,7 @@ function renderToday() {
     : '<div class="empty">오늘 일정 없음</div>';
 
   // 오늘 복무
-  const todayDuty = dutyArray().filter(r=>r.date===todayStr);
+  const todayDuty = dutyArray().filter(r=>dutyInDate(r,todayStr));
   const dutyEl = document.getElementById('todayDuty');
   dutyEl.innerHTML = todayDuty.length
     ? todayDuty.map(r=>`
@@ -1361,7 +1382,7 @@ function renderToday() {
         <div class="duty-av" style="background:${personBg(r.person)}">${personEmoji(r.person)}</div>
         <div>
           <div class="duty-name">${personLabel(r.person)} — ${r.kind}</div>
-          <div class="duty-meta">${r.reason||''} ${r.deputy?'대결: '+r.deputy:''}</div>
+          <div class="duty-meta">${r.reason||''} ${r.place?'📍'+r.place:''} ${r.deputy?'대결: '+r.deputy:''}</div>
         </div>
       </div>`).join('')
     : '<div class="empty">복무 없음</div>';
@@ -1425,7 +1446,7 @@ function renderCalendar() {
     const dow = new Date(calYear,calMonth,d).getDay();
     const cls = ['cal-cell', ds===todayStr?'today':'', dow===0?'sun':dow===6?'sat':''].filter(Boolean).join(' ');
     const dayEvs  = evs.filter(e=>e.start<=ds&&(e.end||e.start)>=ds);
-    const dayDuty = duty.filter(r=>r.date===ds);
+    const dayDuty = duty.filter(r=>dutyInDate(r,ds));
     const dayPAs  = pas.filter(p=>p.date===ds);
     const chips = [
       ...dayEvs.map(e=>`<span class="ev-chip ${typeColor(e.type)}">${e.title}</span>`),
@@ -1450,7 +1471,7 @@ window.showDay = function(ds) {
   if(btn) btn.style.display = 'block';
   document.getElementById('calSelTitle').textContent = fmtDateFull(ds) + ' 일정';
   const dayEvs  = eventsArray().filter(e=>e.start<=ds&&(e.end||e.start)>=ds);
-  const dayDuty = dutyArray().filter(r=>r.date===ds);
+  const dayDuty = dutyArray().filter(r=>dutyInDate(r,ds));
   const dayPAs  = paArray().filter(p=>p.date===ds);
   const DOW=['일','월','화','수','목','금','토'];
   const dow = DOW[new Date(ds+'T00:00:00').getDay()];
@@ -1478,7 +1499,7 @@ window.showDay = function(ds) {
     html+=dayDuty.map(r=>`<div class="ev-row" onclick="openEditDutyModal('${r.id}')">
       <span class="ev-dot" style="background:var(--red)"></span>
       <div style="flex:1;"><div class="ev-title"><strong>${r.person}</strong> — ${r.kind}</div>
-        <div class="ev-cat">${r.reason||''} ${r.deputy?'대결: '+r.deputy:''}</div>
+        <div class="ev-cat">${r.reason||''} ${r.place?'📍'+r.place:''} ${r.deputy?'대결: '+r.deputy:''}</div>
       </div></div>`).join('');
   }
   if(dayPAs.length){
@@ -1629,9 +1650,9 @@ function renderDuty() {
         <div class="duty-av" style="background:${personBg(r.person)}">${personEmoji(r.person)}</div>
         <div style="flex:1;">
           <div class="duty-name">${personLabel(r.person)} — <span style="color:var(--red)">${r.kind}</span>
-            <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${r.date}</span>
+            <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${dutyDateLabel(r)}</span>
           </div>
-          <div class="duty-meta">${r.reason||''} ${r.from?r.from+'~'+r.to:''} ${r.deputy?'대결: '+r.deputy:''}</div>
+          <div class="duty-meta">${r.reason||''} ${r.place?'📍'+r.place:''} ${r.from?r.from+'~'+r.to:''} ${r.deputy?'대결: '+r.deputy:''}</div>
         </div>
       </div>`).join('')
     : '<div class="empty">복무 기록 없음</div>';
@@ -1750,37 +1771,44 @@ window.deleteEvent = async function() {
 // ══════════════════════════════════════════════════════
 window.openAddDutyModal = function() {
   document.getElementById('dutyEditId').value='';
-  document.getElementById('dutyDate').value=todayStr;
+  document.getElementById('dutyStartDate').value=todayStr;
+  document.getElementById('dutyEndDate').value=todayStr;
   document.getElementById('dutyPerson').value='교장';
   document.getElementById('dutyKind').value='출장';
-  ['dutyReason','dutyFrom','dutyTo','dutyDeputy'].forEach(id=>document.getElementById(id).value='');
+  ['dutyReason','dutyFrom','dutyTo','dutyPlace','dutyDeputy'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('dutyDeleteBtn').style.display='none';
   openModal('addDutyModal');
 };
 window.openEditDutyModal = function(id) {
   const r=allDuty[id]; if(!r) return;
   document.getElementById('dutyEditId').value=id;
-  document.getElementById('dutyDate').value=r.date;
+  document.getElementById('dutyStartDate').value=r.date;
+  document.getElementById('dutyEndDate').value=r.endDate||r.date;
   document.getElementById('dutyPerson').value=r.person;
   document.getElementById('dutyKind').value=r.kind||'출장';
   document.getElementById('dutyReason').value=r.reason||'';
   document.getElementById('dutyFrom').value=r.from||'';
   document.getElementById('dutyTo').value=r.to||'';
+  document.getElementById('dutyPlace').value=r.place||'';
   document.getElementById('dutyDeputy').value=r.deputy||'';
   document.getElementById('dutyDeleteBtn').style.display='block';
   openModal('addDutyModal');
 };
 window.saveDuty = async function() {
   if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
-  const date=document.getElementById('dutyDate').value;
-  if(!date){alert('날짜를 입력하세요.');return;}
+  const date=document.getElementById('dutyStartDate').value;
+  const endDate=document.getElementById('dutyEndDate').value||date;
+  if(!date){alert('시작일을 입력하세요.');return;}
+  if(endDate<date){alert('종료일이 시작일보다 빠릅니다.');return;}
   const id=document.getElementById('dutyEditId').value;
   const obj={
-    date,person:document.getElementById('dutyPerson').value,
+    date, endDate,
+    person:document.getElementById('dutyPerson').value,
     kind:document.getElementById('dutyKind').value,
     reason:document.getElementById('dutyReason').value.trim(),
     from:document.getElementById('dutyFrom').value.trim(),
     to:document.getElementById('dutyTo').value.trim(),
+    place:document.getElementById('dutyPlace').value.trim(),
     deputy:document.getElementById('dutyDeputy').value.trim(),
     updatedAt:Date.now()
   };
