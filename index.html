@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.6                           ║
+     ║  areum dashboard v2.7                           ║
      ║  2026-07-09                                     ║
+     ║  v2.7: 월간뷰 hover 크로스헤어, 팝업 모달화       ║
      ║  v2.6: 관리자복무 기간 지정 기능 추가            ║
      ║       시작일~종료일 범위로 오늘·달력 전체 적용   ║
      ║       NEIS 급식 자동 등록 (페이지 열 때 자동)    ║
@@ -14,7 +15,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.6</title>
+<title>areum dashboard v2.7</title>
 <style>
 /* ═══════════════════════════════════════════════
    CSS 변수 & 리셋
@@ -81,12 +82,11 @@ textarea{resize:vertical;}
 .cal-nav{display:flex;align-items:center;gap:8px;}
 .cal-nav button{border:1px solid var(--border);background:var(--gray-light);
   border-radius:6px;padding:4px 10px;font-size:13px;font-weight:700;}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px;}
 .cal-day-hdr{text-align:center;font-size:11px;font-weight:700;padding:4px 0;
   color:var(--text-muted);}
 .cal-day-hdr:first-child{color:var(--red);}
 .cal-day-hdr:last-child{color:#2563eb;}
-.cal-cell{min-height:70px;border:1px solid var(--border);border-radius:6px;padding:4px;
+.cal-cell{min-height:72px;border:1px solid var(--border);border-radius:6px;padding:4px;
   cursor:pointer;transition:.15s;}
 .cal-cell:hover{background:var(--primary-light);border-color:var(--primary);}
 .cal-cell.today{background:#eff6ff;border-color:var(--primary);font-weight:700;}
@@ -114,6 +114,19 @@ textarea{resize:vertical;}
 .chip-staff{background:#fef3c7;color:#92400e;}
 .chip-duty{background:#fee2e2;color:#991b1b;}
 .chip-pa{background:#ede9fe;color:#5b21b6;}
+/* ── G-ONE 스타일 달력 이벤트 막대 ── */
+.cal-bar{display:block;font-size:10px;font-weight:600;
+  padding:2px 6px;margin:0 -4px 2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.6;color:#fff;border-radius:0;cursor:pointer;}
+.cal-bar:hover{filter:brightness(1.12);}
+.cal-bar-single{border-radius:4px;margin:0 0 2px;}
+.cal-bar-start {border-radius:4px 0 0 4px;}
+.cal-bar-end   {border-radius:0 4px 4px 0;}
+.cal-bar-mid   {border-radius:0;}
+.cal-bar-time  {font-size:9px;opacity:.85;margin-left:3px;font-weight:400;}
+.cal-bar-more  {font-size:9px;color:var(--text-muted);padding:1px 4px;
+  margin-bottom:1px;display:block;}
 
 /* ── 달력 상세 패널 ── */
 .ev-row{display:flex;align-items:flex-start;gap:8px;padding:8px;
@@ -168,6 +181,26 @@ textarea{resize:vertical;}
   box-shadow:0 2px 8px rgba(0,0,0,.15);}
 .duty-name{font-size:13px;font-weight:700;}
 .duty-meta{font-size:11px;color:var(--text-muted);margin-top:2px;}
+/* ── 복무 테이블 뷰 ── */
+.duty-table{width:100%;border-collapse:collapse;font-size:12px;}
+.duty-table th{background:var(--gray-light);padding:7px 10px;text-align:left;
+  font-weight:700;border-bottom:2px solid var(--border);white-space:nowrap;
+  color:var(--text-muted);}
+.duty-table td{padding:8px 10px;border-bottom:1px solid var(--border);
+  vertical-align:middle;}
+.duty-table tr:hover td{background:var(--primary-light);cursor:pointer;}
+.duty-kind-badge{display:inline-block;padding:2px 8px;border-radius:4px;
+  font-size:11px;font-weight:700;color:#fff;}
+.duty-date-cell{font-weight:700;white-space:nowrap;color:var(--text-main);}
+.duty-person-cell{font-weight:700;}
+/* ── 수행평가 2단 ── */
+.pa-grid-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;}
+@media(max-width:600px){.pa-grid-2col{grid-template-columns:1fr;}}
+/* ── 달력 비율 ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+  gap:2px;margin-top:8px;width:100%;}
+.cal-cell{min-height:72px;border:1px solid var(--border);border-radius:6px;
+  padding:4px;cursor:pointer;transition:.15s;overflow:hidden;}
 
 /* ── 핵심업무 ── */
 .hl-item{border-left:3px solid var(--primary);padding:8px 12px;
@@ -269,6 +302,91 @@ textarea{resize:vertical;}
 .help-faq-q{font-size:13px;font-weight:800;color:var(--primary);margin-bottom:4px;}
 .help-faq-a{font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;}
 .help-version{text-align:right;font-size:11px;color:var(--text-muted);margin-top:24px;}
+/* ── 뷰 토글 ── */
+.view-toggle{display:flex;gap:4px;margin-left:8px;}
+.view-btn{border:1.5px solid var(--border);background:var(--gray-light);border-radius:8px;
+  padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-main);}
+.view-btn.active{background:var(--purple);color:#fff;border-color:var(--purple);}
+/* ── 수행평가 히트맵 ── */
+.heatmap-wrap{overflow-x:auto;margin-top:4px;width:100%;}
+.heatmap-table{border-collapse:collapse;font-size:11px;table-layout:fixed;width:100%;}
+.heatmap-table th{padding:4px 5px;text-align:center;font-weight:700;white-space:nowrap;
+  background:var(--gray-light);border:1px solid var(--border);min-width:26px;}
+.heatmap-table td{padding:3px 4px;text-align:center;border:1px solid var(--border);
+  cursor:pointer;min-width:26px;font-size:11px;font-weight:600;}
+.hm-row-hdr{background:var(--gray-light);font-weight:700;text-align:left;
+  padding:4px 10px;white-space:nowrap;font-size:11px;}
+.hm-0{background:#fff;color:transparent;}
+.hm-1{background:#bbf7d0;color:#065f46;}
+.hm-2{background:#fde68a;color:#92400e;}
+.hm-3{background:#fca5a5;color:#7f1d1d;font-weight:800;}
+/* 히트맵 오늘 표시: 헤더 원형 배지 */
+.hm-today-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;background:var(--purple);color:#fff;
+  border-radius:50%;font-size:11px;font-weight:800;line-height:1;
+}
+/* 오늘 열 데이터 셀: 매우 연한 틴트 */
+.hm-today-col{background-color:rgba(139,92,246,0.07)!important;}
+.hm-wknd{background-color:#f3f4f6 !important;}
+/* 히트맵 행/열 hover 크로스헤어 */
+.heatmap-table tbody tr:hover td {
+  box-shadow: inset 0 0 0 9999px rgba(139,92,246,0.10);
+}
+.hm-col-hover {
+  box-shadow: inset 0 0 0 9999px rgba(139,92,246,0.10) !important;
+}
+.heatmap-table tbody tr:hover td.hm-col-hover {
+  box-shadow: inset 0 0 0 9999px rgba(139,92,246,0.30) !important;
+  outline: 2px solid var(--purple);
+  position: relative; z-index: 2;
+}
+/* 히트맵 상세 팝업 — 기존 modal 안에 쓰는 리스트 아이템 */
+.hm-popup-item {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:10px 12px; border-radius:8px; margin-bottom:6px;
+  background:var(--primary-light); border:1px solid var(--border);
+}
+.hm-popup-period {
+  flex-shrink:0; background:var(--purple); color:#fff;
+  font-size:11px; font-weight:800; border-radius:6px;
+  padding:3px 7px; white-space:nowrap; line-height:1.6;
+}
+.hm-popup-no-period {
+  flex-shrink:0; background:var(--gray-light); color:var(--text-muted);
+  font-size:11px; font-weight:700; border-radius:6px;
+  padding:3px 7px; white-space:nowrap; line-height:1.6;
+}
+.hm-popup-subj { font-size:13px; font-weight:800; color:var(--text-main); }
+.hm-popup-teacher { font-size:11px; color:var(--text-muted); margin-top:2px; }
+/* ── 관리자복무 간트 ── */
+.gantt-wrap{overflow-x:auto;margin-top:4px;width:100%;}
+.gantt-table{border-collapse:collapse;font-size:11px;table-layout:fixed;width:100%;}
+.gantt-table th{padding:5px 2px;text-align:center;font-weight:700;
+  background:var(--gray-light);border:1px solid var(--border);white-space:nowrap;}
+.gantt-table td{border:1px solid var(--border);padding:2px;height:36px;position:relative;}
+.gantt-row-hdr{background:var(--gray-light);font-weight:700;padding:6px 8px;
+  white-space:nowrap;text-align:left;font-size:12px;width:56px;}
+.gantt-bar{position:absolute;inset:3px 2px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;color:#fff;overflow:hidden;cursor:pointer;}
+.gantt-cell-dbl{cursor:cell;}
+.gantt-wknd{background:#f9fafb;}
+.gantt-today{background:#ede9fe;}
+.duty-bar-출장{background:#3b82f6;}
+.duty-bar-연가{background:#22c55e;}
+.duty-bar-병가{background:#ef4444;}
+.duty-bar-공가{background:#8b5cf6;}
+.duty-bar-특별휴가{background:#f59e0b;}
+.duty-bar-지각{background:#f97316;}
+.duty-bar-조퇴{background:#0ea5e9;}
+.duty-bar-기타{background:#6b7280;}
+.gantt-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:11px;}
+.gantt-legend-item{display:flex;align-items:center;gap:4px;}
+.gantt-legend-dot{width:12px;height:12px;border-radius:3px;}
+/* ── 정렬 드롭다운 ── */
+.sort-select{border:1.5px solid var(--border);background:var(--gray-light);border-radius:8px;
+  padding:4px 8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text-main);}
 
 /* ══════════════════════════════════════════════════════
    반응형 — 태블릿 (≤768px)
@@ -524,18 +642,44 @@ textarea{resize:vertical;}
 
 <!-- 🔐 관리자복무 -->
 <div class="page" id="page-duty">
-  <div style="display:flex;gap:14px;flex-wrap:wrap;">
+  <!-- 상단 컨트롤 바 -->
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;
+    background:white;padding:10px 14px;border-radius:10px;border:1px solid var(--border);">
+    <div class="view-toggle">
+      <button id="dutyViewList" class="view-btn active" onclick="setDutyView('list')">📋 목록</button>
+      <button id="dutyViewGantt" class="view-btn" onclick="setDutyView('gantt')">📊 월별</button>
+    </div>
+    <!-- 간트 전용: 월 네비게이션 -->
+    <div id="ganttNav" style="display:none;align-items:center;gap:6px;flex:1;">
+      <button onclick="moveGantt(-1)" style="border:1.5px solid var(--border);background:var(--gray-light);
+        border-radius:8px;padding:3px 10px;font-size:13px;font-weight:700;">◀</button>
+      <strong id="ganttTitle" style="font-size:13px;font-weight:800;min-width:140px;text-align:center;"></strong>
+      <button onclick="moveGantt(1)" style="border:1.5px solid var(--border);background:var(--gray-light);
+        border-radius:8px;padding:3px 10px;font-size:13px;font-weight:700;">▶</button>
+      <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">셀 더블클릭으로 추가</span>
+    </div>
+    <button class="sbtn sbtn-p" onclick="openAddDutyModal()" style="margin-left:auto;">+ 추가</button>
+  </div>
+  <!-- 목록 뷰 -->
+  <div id="dutyListView" style="display:flex;gap:14px;flex-wrap:wrap;">
     <div class="card" style="flex:0 0 220px;">
       <div class="card-hdr"><div class="card-ttl">👤 관리자</div></div>
       <div class="card-body" id="dutyPersonList"></div>
     </div>
     <div style="flex:1;min-width:280px;">
       <div class="card">
-        <div class="card-hdr">
-          <div class="card-ttl">전체 복무 기록</div>
-          <button class="sbtn sbtn-p" onclick="openAddDutyModal()">+ 추가</button>
-        </div>
+        <div class="card-hdr"><div class="card-ttl">전체 복무 기록</div></div>
         <div class="card-body" id="dutyList"><div class="empty">복무 기록 없음</div></div>
+      </div>
+    </div>
+  </div>
+  <!-- 간트 뷰 -->
+  <div id="dutyGanttView" style="display:none;">
+    <div class="card">
+      <div class="card-hdr"><div class="card-ttl">📊 복무 현황 간트 차트</div></div>
+      <div class="card-body">
+        <div class="gantt-wrap" id="ganttWrap"></div>
+        <div class="gantt-legend" id="ganttLegend"></div>
       </div>
     </div>
   </div>
@@ -543,13 +687,24 @@ textarea{resize:vertical;}
 
 <!-- 📝 수행평가 -->
 <div class="page" id="page-pa">
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;
     background:white;padding:10px 14px;border-radius:10px;border:1px solid var(--border);">
     <button onclick="movePACal(-1)" style="border:1.5px solid var(--border);background:var(--gray-light);
       border-radius:8px;padding:4px 12px;font-size:14px;font-weight:700;">◀</button>
     <strong id="paCalTitle" style="font-size:15px;font-weight:800;color:var(--purple);min-width:130px;text-align:center;"></strong>
     <button onclick="movePACal(1)" style="border:1.5px solid var(--border);background:var(--gray-light);
       border-radius:8px;padding:4px 12px;font-size:14px;font-weight:700;">▶</button>
+    <!-- 정렬 (목록 뷰에서만 의미있음) -->
+    <select id="paSortSel" class="sort-select" onchange="setPASort(this.value)">
+      <option value="date">날짜순</option>
+      <option value="subject">교과순</option>
+      <option value="class">반순</option>
+    </select>
+    <!-- 뷰 토글 -->
+    <div class="view-toggle">
+      <button id="paViewList" class="view-btn active" onclick="setPAView('list')">📋 목록</button>
+      <button id="paViewHeat" class="view-btn" onclick="setPAView('heatmap')">📅 월간</button>
+    </div>
     <button class="sbtn sbtn-p" onclick="openAddPAModal()" style="margin-left:auto;">+ 수행평가 추가</button>
   </div>
   <div id="paGrid"><div class="empty">수행평가 데이터 없음</div></div>
@@ -704,8 +859,23 @@ textarea{resize:vertical;}
   <div class="modal">
     <div class="modal-ttl" id="evModalTitle">+ 일정 추가</div>
     <input type="hidden" id="evEditId">
-    <div class="form-row"><label>날짜</label><input type="date" id="evDate"/></div>
+    <div class="g2">
+      <div class="form-row"><label>시작일 *</label><input type="date" id="evDate"/></div>
+      <div class="form-row"><label>종료일</label><input type="date" id="evEndDate"/></div>
+    </div>
     <div class="form-row"><label>행사명 *</label><input id="evTitle" placeholder="행사·일정 이름"/></div>
+    <div class="form-row">
+      <label>교시</label>
+      <div class="day-checks">
+        <label class="day-check-lbl"><input type="checkbox" class="evPeriodCheck" value="1"> 1교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="evPeriodCheck" value="2"> 2교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="evPeriodCheck" value="3"> 3교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="evPeriodCheck" value="4"> 4교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="evPeriodCheck" value="5"> 5교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="evPeriodCheck" value="6"> 6교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="evPeriodCheck" value="7"> 7교시</label>
+      </div>
+    </div>
     <div class="g2">
       <div class="form-row">
         <label>구분</label>
@@ -756,7 +926,8 @@ textarea{resize:vertical;}
         <label>복무유형</label>
         <select id="dutyKind">
           <option>출장</option><option>연가</option><option>병가</option>
-          <option>공가</option><option>특별휴가</option><option>기타</option>
+          <option>공가</option><option>특별휴가</option>
+          <option>지각</option><option>조퇴</option><option>기타</option>
         </select>
       </div>
     </div>
@@ -787,17 +958,29 @@ textarea{resize:vertical;}
 <!-- 수행평가 추가 모달 -->
 <div class="overlay" id="addPAModal">
   <div class="modal">
-    <div class="modal-ttl">📝 수행평가 추가</div>
+    <div class="modal-ttl" id="paModalTitle">📝 수행평가 추가</div>
     <input type="hidden" id="paEditId">
     <div class="g2">
-      <div class="form-row"><label>날짜</label><input type="date" id="paDate"/></div>
       <div class="form-row"><label>교과 *</label><input id="paSubject" placeholder="국어"/></div>
+      <div class="form-row"><label>담당교사</label><input id="paTeacher" placeholder="홍길동"/></div>
     </div>
     <div class="g2">
-      <div class="form-row"><label>담당교사</label><input id="paTeacher" placeholder="홍길동"/></div>
-      <div class="form-row"><label>비고/내용</label><input id="paMemo" placeholder="논술·서술"/></div>
+      <div class="form-row"><label>대상반 (쉼표 구분)</label><input id="paClasses" placeholder="1-1, 1-2, 1-3"/></div>
+      <div class="form-row"><label>날짜</label><input type="date" id="paDate"/></div>
     </div>
-    <div class="form-row"><label>대상반 (쉼표 구분)</label><input id="paClasses" placeholder="1-1, 1-2, 1-3"/></div>
+    <div class="form-row">
+      <label>교시</label>
+      <div class="day-checks">
+        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="1"> 1교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="2"> 2교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="3"> 3교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="4"> 4교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="5"> 5교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="6"> 6교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="7"> 7교시</label>
+      </div>
+    </div>
+    <div class="form-row"><label>내용</label><input id="paMemo" placeholder="논술·서술 등 평가 내용"/></div>
     <div class="form-actions">
       <button class="btn btn-r" id="paDeleteBtn" style="display:none" onclick="deletePA()">삭제</button>
       <button class="btn btn-g" onclick="closeModal('addPAModal')">취소</button>
@@ -827,6 +1010,18 @@ textarea{resize:vertical;}
       <div class="day-check-hint">여러 요일 선택 시 같은 내용이 모두 적용됩니다</div>
     </div>
     <div class="form-row">
+      <label>교시 (선택)</label>
+      <div class="day-checks">
+        <label class="day-check-lbl"><input type="checkbox" class="wkPeriodCheck" value="1"> 1교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkPeriodCheck" value="2"> 2교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkPeriodCheck" value="3"> 3교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkPeriodCheck" value="4"> 4교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkPeriodCheck" value="5"> 5교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkPeriodCheck" value="6"> 6교시</label>
+        <label class="day-check-lbl"><input type="checkbox" class="wkPeriodCheck" value="7"> 7교시</label>
+      </div>
+    </div>
+    <div class="form-row">
       <label>업무 내용</label>
       <textarea id="wkCellContent" rows="4" placeholder="업무 내용을 입력하세요"></textarea>
     </div>
@@ -834,6 +1029,18 @@ textarea{resize:vertical;}
       <button class="btn btn-r" id="wkCellDeleteBtn" style="display:none" onclick="deleteWkCell()">삭제</button>
       <button class="btn btn-g" onclick="closeModal('wkCellModal')">취소</button>
       <button class="btn btn-p" onclick="saveWkCell()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📊 수행평가 히트맵 셀 상세 모달 -->
+<div class="overlay" id="hmDetailModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-ttl" id="hmDetailTitle">📚 수행평가 상세</div>
+    <div id="hmDetailSubtitle" style="font-size:12px;color:var(--text-muted);margin:-6px 0 14px;"></div>
+    <div id="hmDetailBody"></div>
+    <div class="form-actions" style="margin-top:12px;">
+      <button class="btn btn-g" onclick="closeModal('hmDetailModal')">닫기</button>
     </div>
   </div>
 </div>
@@ -1121,6 +1328,11 @@ let viewWeekKey   = ''; // 현재 조회 중인 주의 일요일 키
 let activeTab  = 'today';
 let calYear, calMonth;
 let paCal = { year: null, month: null };
+let paView   = 'heatmap'; // 'list' | 'heatmap'
+let paSort   = 'date';   // 'date' | 'subject' | 'class'
+let dutyView = 'list';   // 'list' | 'gantt'
+let ganttMode = 'month'; // 월 단위 고정
+let ganttAnchor = null;  // 간트 기준일 (YYYY-MM-DD)
 
 const todayStr = (() => {
   const d = new Date();
@@ -1131,6 +1343,7 @@ calYear  = today.getFullYear();
 calMonth = today.getMonth();
 paCal.year  = today.getFullYear();
 paCal.month = today.getMonth();
+ganttAnchor = todayStr;
 
 function S2(n){ return String(n).padStart(2,'0'); }
 function fmtDateFull(ds){
@@ -1143,7 +1356,7 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v2.6';
+const APP_VERSION = 'v2.7';
 const APP_DATE    = '2026-07-09';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
@@ -1265,6 +1478,13 @@ function typeColor(type) {
   if(type==='staff') return 'chip-staff';
   if(type==='parent') return 'chip-parent';
   return 'chip-etc';
+}
+// G-ONE 스타일 달력 막대용 실색상
+function typeHex(type) {
+  if(type==='student'||type==='haksa'||type==='grade') return '#1d4ed8';
+  if(type==='staff')  return '#b45309';
+  if(type==='parent') return '#7c3aed';
+  return '#6b7280';
 }
 function typeLabel(type) {
   if(type==='student'||type==='haksa'||type==='grade') return '학생';
@@ -1398,7 +1618,7 @@ function renderToday() {
       <div class="ev-row" onclick="openEditPAModal('${p.id}')">
         <span class="ev-dot" style="background:var(--purple)"></span>
         <div><div class="ev-title"><strong style="color:var(--purple)">${p.subject}</strong> ${p.classes?'· '+p.classes:''}</div>
-          <div class="ev-cat">${p.date} ${p.teacher?'👤'+p.teacher:''}</div>
+          <div class="ev-cat">${p.date} ${p.period?p.period+'교시 · ':''} ${p.teacher?'👤'+p.teacher:''}</div>
         </div>
       </div>`).join('')
     : '<div class="empty">이번 주 수행평가 없음</div>';
@@ -1435,25 +1655,84 @@ function renderCalendar() {
   const grid = document.getElementById('calGrid');
   grid.innerHTML = DOW_HDR.map(h=>`<div class="cal-day-hdr">${h}</div>`).join('');
 
+  // 이번 달 첫날 문자열 (이전 달에서 넘어온 스팬 이벤트 표시 기준)
+  const monthStart = `${calYear}-${S2(calMonth+1)}-01`;
+
   let cells = '';
   // 이전 달 채우기
   for(let i=firstDay-1;i>=0;i--){
     cells += `<div class="cal-cell other-month"><div class="date-num">${prevLast-i}</div></div>`;
   }
-  // 이번 달
+  // 이번 달 — G-ONE 스타일 스팬 막대
   for(let d=1;d<=lastDate;d++){
     const ds = calYear+'-'+S2(calMonth+1)+'-'+S2(d);
     const dow = new Date(calYear,calMonth,d).getDay();
     const cls = ['cal-cell', ds===todayStr?'today':'', dow===0?'sun':dow===6?'sat':''].filter(Boolean).join(' ');
+
     const dayEvs  = evs.filter(e=>e.start<=ds&&(e.end||e.start)>=ds);
     const dayDuty = duty.filter(r=>dutyInDate(r,ds));
     const dayPAs  = pas.filter(p=>p.date===ds);
-    const chips = [
-      ...dayEvs.map(e=>`<span class="ev-chip ${typeColor(e.type)}">${e.title}</span>`),
-      ...dayDuty.map(r=>`<span class="ev-chip chip-duty">${r.person}·${r.kind}</span>`),
-      ...dayPAs.map(p=>`<span class="ev-chip chip-pa">${p.subject}</span>`)
-    ].slice(0,3).join('');
-    cells += `<div class="${cls}" onclick="showDay('${ds}')" ondblclick="openAddEventForDate('${ds}')"><div class="date-num">${d}</div>${chips}</div>`;
+
+    let bars = '';
+    let barCount = 0;
+    const MAX_BARS = 4;
+
+    // ── 월중계획 이벤트 (스팬 막대) ──
+    for(const e of dayEvs){
+      if(barCount >= MAX_BARS) break;
+      const evEnd = e.end || e.start;
+      const isMulti = e.start !== evEnd;
+      const isStart = e.start === ds;
+      const isEnd   = evEnd === ds;
+      // 제목 표시: 시작일 or 이번 달 첫날(이전달에서 넘어온 스팬)
+      const firstVisible = e.start >= monthStart ? e.start : monthStart;
+      const showLabel = ds === firstVisible;
+      let barCls = isMulti
+        ? (isStart ? 'cal-bar-start' : isEnd ? 'cal-bar-end' : 'cal-bar-mid')
+        : 'cal-bar-single';
+      const col = typeHex(e.type);
+      const timeStr = (showLabel && e.period) ? `<span class="cal-bar-time">${e.period}교시</span>` : '';
+      const label = showLabel ? e.title : '';
+      bars += `<span class="cal-bar ${barCls}" style="background:${col};"
+        onclick="event.stopPropagation();openEditEventModal('${e.id}')">${label}${timeStr}</span>`;
+      barCount++;
+    }
+
+    // ── 관리자복무 (스팬 막대) ──
+    for(const r of dayDuty){
+      if(barCount >= MAX_BARS) break;
+      const rEnd = r.endDate || r.date;
+      const isMulti = r.date !== rEnd;
+      const isStart = r.date === ds;
+      const isEnd   = rEnd === ds;
+      const firstVisible = r.date >= monthStart ? r.date : monthStart;
+      const showLabel = ds === firstVisible;
+      let barCls = isMulti
+        ? (isStart ? 'cal-bar-start' : isEnd ? 'cal-bar-end' : 'cal-bar-mid')
+        : 'cal-bar-single';
+      const col = DUTY_COLORS[r.kind] || '#6b7280';
+      const label = showLabel ? `${personLabel(r.person)}·${r.kind}` : '';
+      bars += `<span class="cal-bar ${barCls}" style="background:${col};"
+        onclick="event.stopPropagation();openEditDutyModal('${r.id}')">${label}</span>`;
+      barCount++;
+    }
+
+    // ── 수행평가 (단일일 칩 스타일 막대) ──
+    for(const p of dayPAs){
+      if(barCount >= MAX_BARS) break;
+      const clsCnt = p.classes ? p.classes.split(',').filter(s=>s.trim()).length : 0;
+      bars += `<span class="cal-bar cal-bar-single" style="background:#6d28d9;"
+        onclick="event.stopPropagation();openEditPAModal('${p.id}')">${p.subject}${clsCnt?' ('+clsCnt+'반)':''}</span>`;
+      barCount++;
+    }
+
+    // 초과 건수 표시
+    const total = dayEvs.length + dayDuty.length + dayPAs.length;
+    if(total > MAX_BARS){
+      bars += `<span class="cal-bar-more">+${total-MAX_BARS}건 더보기</span>`;
+    }
+
+    cells += `<div class="${cls}" onclick="showDay('${ds}')" ondblclick="openAddEventForDate('${ds}')"><div class="date-num">${d}</div>${bars}</div>`;
   }
   // 다음 달 채우기
   const remain = 42 - firstDay - lastDate;
@@ -1488,11 +1767,16 @@ window.showDay = function(ds) {
 
   if(dayEvs.length){
     html+=sec('📅','월중계획','var(--primary)');
-    html+=dayEvs.map(e=>`<div class="ev-row" onclick="openEditEventModal('${e.id}')">
-      <span class="ev-dot" style="background:var(--primary)"></span>
-      <div style="flex:1;"><div class="ev-title">${e.title}</div>
-        <div class="ev-cat">${typeLabel(e.type)}${e.grade?' · '+e.grade.replace(/,/g,'·'):''} ${e.place?'📍'+e.place:''}</div>
-      </div></div>`).join('');
+    html+=dayEvs.map(e=>{
+      const dateRange=(e.end&&e.end!==e.start)?`${e.start.slice(5).replace('-','/')}~${e.end.slice(5).replace('-','/')} `:'';
+      const timeStr=e.period?`<span style="background:${typeHex(e.type)};color:#fff;border-radius:3px;padding:1px 5px;font-size:10px;font-weight:700;margin-left:4px;">${e.period}교시</span>`:'';
+      return `<div class="ev-row" onclick="openEditEventModal('${e.id}')">
+        <span style="width:5px;min-width:5px;align-self:stretch;border-radius:3px;background:${typeHex(e.type)};margin-right:6px;"></span>
+        <div style="flex:1;">
+          <div class="ev-title">${e.title}${timeStr}</div>
+          <div class="ev-cat">${dateRange}${typeLabel(e.type)}${e.grade?' · '+e.grade.replace(/,/g,'·'):''} ${e.place?'📍'+e.place:''}</div>
+        </div></div>`;
+    }).join('');
   }
   if(dayDuty.length){
     html+=sec('🔴','관리자복무','var(--red)');
@@ -1506,8 +1790,10 @@ window.showDay = function(ds) {
     html+=sec('📝','수행평가','var(--purple)');
     html+=dayPAs.map(p=>`<div class="ev-row" onclick="openEditPAModal('${p.id}')">
       <span class="ev-dot" style="background:var(--purple)"></span>
-      <div style="flex:1;"><div class="ev-title"><strong style="color:var(--purple)">${p.subject}</strong> ${p.classes?'· '+p.classes:''}</div>
-        <div class="ev-cat">${p.teacher?'👤'+p.teacher:''} ${p.memo||''}</div>
+      <div style="flex:1;">
+        <div class="ev-title"><strong style="color:var(--purple)">${p.subject}</strong></div>
+        ${p.classes?`<div style="margin:2px 0;display:flex;flex-wrap:wrap;gap:3px;">${p.classes.split(',').map(c=>`<span style="background:#ede9fe;color:#6d28d9;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;">${c.trim()}</span>`).join('')}</div>`:''}
+        <div class="ev-cat">${p.period?p.period+'교시 · ':''} ${p.teacher?'👤 '+p.teacher:''} ${p.memo?'· '+p.memo:''}</div>
       </div></div>`).join('');
   }
   if(dayWk.length){
@@ -1599,8 +1885,10 @@ function renderWeekly() {
       const e = data[dept] || {};
       const tds = DAYS.map(d => {
         const val = e[d] || '';
+        const period = e['period_'+d] || '';
+        const periodStr = period ? `<span style="font-size:10px;color:var(--purple);font-weight:700;display:block;margin-bottom:2px;">${period}교시</span>` : '';
         const cls = val ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
-        return `<td class="${cls}" ondblclick="openWkCellModal('${dept}','${d}')">${val}</td>`;
+        return `<td class="${cls}" ondblclick="openWkCellModal('${dept}','${d}')">${periodStr}${val}</td>`;
       }).join('');
       const memoCls = e.비고 ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
       return `<tr>
@@ -1628,34 +1916,56 @@ window.resetViewWeek = function() {
 // ══════════════════════════════════════════════════════
 function renderDuty() {
   const persons = ['교장','1캠교감','2캠교감','교감'];
-  // 관리자 아바타 카드
+  // 인원별 건수 요약 (간단 칩)
   const personEl = document.getElementById('dutyPersonList');
-  personEl.innerHTML = persons.map(p => {
-    const cnt = dutyArray().filter(r=>r.person===p).length;
-    return `<div class="duty-card" style="cursor:default;align-items:center;">
-      <div class="duty-av" style="background:${personBg(p)};width:50px;height:50px;font-size:28px;">${personEmoji(p)}</div>
-      <div>
-        <div class="duty-name">${personLabel(p)}</div>
-        <div class="duty-meta">누적 ${cnt}건</div>
-      </div>
-    </div>`;
-  }).join('');
+  personEl.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+    ${persons.map(p=>{
+      const cnt = dutyArray().filter(r=>r.person===p).length;
+      return `<div style="display:inline-flex;align-items:center;gap:5px;
+        padding:4px 12px;border-radius:20px;border:1.5px solid var(--border);
+        font-size:12px;font-weight:700;background:white;">
+        <span style="color:var(--primary)">${personLabel(p)}</span>
+        <span style="color:var(--text-muted);font-weight:400;">누적 ${cnt}건</span>
+      </div>`;
+    }).join('')}
+  </div>`;
 
-  // 복무 목록 (최신순)
+  // 복무 목록 — 테이블 뷰 (최신순)
   const sorted = dutyArray().sort((a,b)=>b.date.localeCompare(a.date));
   const listEl = document.getElementById('dutyList');
-  listEl.innerHTML = sorted.length
-    ? sorted.map(r=>`
-      <div class="duty-card" onclick="openEditDutyModal('${r.id}')">
-        <div class="duty-av" style="background:${personBg(r.person)}">${personEmoji(r.person)}</div>
-        <div style="flex:1;">
-          <div class="duty-name">${personLabel(r.person)} — <span style="color:var(--red)">${r.kind}</span>
-            <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${dutyDateLabel(r)}</span>
-          </div>
-          <div class="duty-meta">${r.reason||''} ${r.place?'📍'+r.place:''} ${r.from?r.from+'~'+r.to:''} ${r.deputy?'대결: '+r.deputy:''}</div>
-        </div>
-      </div>`).join('')
-    : '<div class="empty">복무 기록 없음</div>';
+  if(!sorted.length){
+    listEl.innerHTML='<div class="empty">복무 기록 없음</div>';
+  } else {
+    listEl.innerHTML=`
+    <div style="overflow-x:auto;">
+    <table class="duty-table">
+      <thead><tr>
+        <th>날짜</th>
+        <th>복무자</th>
+        <th>유형</th>
+        <th>사유</th>
+        <th>장소</th>
+        <th>시간</th>
+        <th>대결자</th>
+      </tr></thead>
+      <tbody>
+      ${sorted.map(r=>`
+        <tr onclick="openEditDutyModal('${r.id}')">
+          <td class="duty-date-cell">${dutyDateLabel(r)}</td>
+          <td class="duty-person-cell">${personLabel(r.person)}</td>
+          <td><span class="duty-kind-badge" style="background:${DUTY_COLORS[r.kind]||'#6b7280'}">${r.kind}</span></td>
+          <td style="color:var(--text-main);">${r.reason||'-'}</td>
+          <td style="color:var(--text-muted);">${r.place||'-'}</td>
+          <td style="color:var(--text-muted);white-space:nowrap;">${r.from&&r.to?r.from+'~'+r.to:'-'}</td>
+          <td style="color:var(--text-muted);">${r.deputy||'-'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>`;
+  }
+
+  // 간트 뷰가 열려있으면 함께 갱신
+  if(dutyView==='gantt') renderDutyGantt();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1672,33 +1982,217 @@ function renderPA() {
   const title=`${paCal.year}년 ${paCal.month+1}월`;
   document.getElementById('paCalTitle').textContent=title;
 
+  // 뷰 토글 버튼 상태
+  document.getElementById('paViewList').className='view-btn'+(paView==='list'?' active':'');
+  document.getElementById('paViewHeat').className='view-btn'+(paView==='heatmap'?' active':'');
+  // 정렬 드롭다운 표시/숨김
+  document.getElementById('paSortSel').style.display = paView==='list' ? '' : 'none';
+
   const monthStr=`${paCal.year}-${S2(paCal.month+1)}`;
-  const monthPAs=paArray().filter(p=>p.date&&p.date.startsWith(monthStr))
-    .sort((a,b)=>a.date.localeCompare(b.date));
-
+  const monthPAs=paArray().filter(p=>p.date&&p.date.startsWith(monthStr));
   const grid=document.getElementById('paGrid');
-  if(!monthPAs.length){grid.innerHTML='<div class="empty">이 달 수행평가 없음</div>';return;}
 
-  // 날짜별 그룹
-  const groups={};
-  for(const p of monthPAs){
-    if(!groups[p.date]) groups[p.date]=[];
-    groups[p.date].push(p);
+  if(paView==='heatmap'){
+    grid.className='';
+    renderPAHeatmap(monthPAs, monthStr, grid);
+    return;
   }
 
-  grid.innerHTML=Object.entries(groups).sort(([a],[b])=>a.localeCompare(b)).map(([date,pList])=>`
-    <div class="pa-card">
-      <div class="pa-date-hdr">📅 ${fmtDateFull(date)}</div>
-      ${pList.map(p=>`
-        <div class="pa-item" onclick="openEditPAModal('${p.id}')">
-          <div class="pa-dot"></div>
-          <div>
-            <div><span class="pa-subj">${p.subject}</span>${p.classes?' <span style="font-size:11px;color:var(--text-muted)">· '+p.classes+'</span>':''}</div>
-            <div class="pa-meta">${p.teacher?'👤 '+p.teacher+' ':''} ${p.memo||''}</div>
-          </div>
-        </div>`).join('')}
+  // ── 목록 뷰 (2단 레이아웃) ──
+  grid.className='pa-grid-2col';
+  if(!monthPAs.length){
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1;">이 달 수행평가 없음</div>';
+    return;
+  }
+
+  // 정렬
+  const sorted = [...monthPAs].sort((a,b)=>{
+    if(paSort==='subject') return (a.subject||'').localeCompare(b.subject||'');
+    if(paSort==='class'){
+      const ca=(a.classes||'').split(',')[0].trim();
+      const cb=(b.classes||'').split(',')[0].trim();
+      return ca.localeCompare(cb)||a.date.localeCompare(b.date);
+    }
+    return a.date.localeCompare(b.date); // 날짜순 기본
+  });
+
+  // 날짜별 그룹 (날짜순) or 플랫 리스트 (교과/반순)
+  if(paSort==='date'){
+    const groups={};
+    for(const p of sorted){
+      if(!groups[p.date]) groups[p.date]=[];
+      groups[p.date].push(p);
+    }
+    grid.innerHTML=Object.entries(groups).sort(([a],[b])=>a.localeCompare(b)).map(([date,pList])=>`
+      <div class="pa-card">
+        <div class="pa-date-hdr">📅 ${fmtDateFull(date)}</div>
+        ${paItemHtml(pList)}
+      </div>`).join('');
+  } else {
+    // 교과/반 정렬: 개별 항목별 카드로 2단 배치
+    grid.innerHTML=sorted.map(p=>`
+      <div class="pa-card">${paItemHtml([p])}</div>`).join('');
+  }
+}
+
+function paItemHtml(pList){
+  return pList.map(p=>`
+    <div class="pa-item" onclick="openEditPAModal('${p.id}')">
+      <div class="pa-dot"></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span class="pa-subj">${p.subject}</span>
+          ${p.classes?p.classes.split(',').map(c=>`<span style="background:#ede9fe;color:#6d28d9;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;">${c.trim()}</span>`).join(''):''}
+        </div>
+        <div class="pa-meta">${paSort!=='date'?'📅 '+p.date+' ':''} ${p.period?p.period+'교시 · ':''} ${p.teacher?'👤 '+p.teacher:''} ${p.memo?'· '+p.memo:''}</div>
+      </div>
     </div>`).join('');
 }
+
+// ── 수행평가 히트맵 ──
+function renderPAHeatmap(monthPAs, monthStr, grid){
+  // 이 달의 날짜 목록
+  const [yr,mo] = monthStr.split('-').map(Number);
+  const daysInMonth = new Date(yr,mo,0).getDate();
+  const dates = Array.from({length:daysInMonth},(_,i)=>`${monthStr}-${S2(i+1)}`);
+
+  // 이 달에 등장하는 모든 학급 수집 (정렬)
+  const classSet = new Set();
+  for(const p of monthPAs){
+    if(p.classes) p.classes.split(',').forEach(c=>{const t=c.trim();if(t)classSet.add(t);});
+  }
+  // 학급 정렬: 1-1, 1-2 … 3-6 순
+  const classes = [...classSet].sort((a,b)=>{
+    const pa=a.split('-').map(Number), pb=b.split('-').map(Number);
+    return (pa[0]-pb[0])||((pa[1]||0)-(pb[1]||0));
+  });
+
+  if(!classes.length){
+    grid.innerHTML='<div class="empty">이 달 수행평가 없음</div>';return;
+  }
+
+  // 학급×날짜 집계
+  const map={}; // map[class][date] = [{subject,id},...]
+  for(const p of monthPAs){
+    if(!p.classes) continue;
+    p.classes.split(',').forEach(c=>{
+      const t=c.trim(); if(!t) return;
+      if(!map[t]) map[t]={};
+      if(!map[t][p.date]) map[t][p.date]=[];
+      map[t][p.date].push(p);
+    });
+  }
+
+  const DOW=['일','월','화','수','목','금','토'];
+
+  // 헤더 (날짜)
+  let html=`<div class="heatmap-wrap"><table class="heatmap-table"><thead><tr>
+    <th class="hm-row-hdr">학급</th>`;
+  for(let ci=0;ci<dates.length;ci++){
+    const ds=dates[ci];
+    const d=new Date(ds+'T00:00:00');
+    const dow=d.getDay();
+    const isToday=ds===todayStr;
+    const wkCls=dow===0||dow===6?'hm-wknd':'';
+    const dayNum = isToday
+      ? `<span class="hm-today-badge">${d.getDate()}</span>`
+      : `${d.getDate()}`;
+    html+=`<th class="${wkCls}" data-hmcol="${ci}" style="${dow===0?'color:#ef4444':dow===6?'color:#3b82f6':''}">`
+      +`${dayNum}<br><span style="font-size:9px;font-weight:400;">${DOW[dow]}</span></th>`;
+  }
+  html+=`</tr></thead><tbody>`;
+
+  // 행 (학급)
+  for(const cls of classes){
+    html+=`<tr><td class="hm-row-hdr">${cls}</td>`;
+    for(let ci=0;ci<dates.length;ci++){
+      const ds=dates[ci];
+      const items=map[cls]?.[ds]||[];
+      const cnt=items.length;
+      const hmCls=cnt===0?'hm-0':cnt===1?'hm-1':cnt===2?'hm-2':'hm-3';
+      const d=new Date(ds+'T00:00:00'); const dow=d.getDay();
+      const wkCls=dow===0||dow===6?'hm-wknd':'';
+      const todayCls=ds===todayStr?' hm-today-col':'';
+      const title=items.map(p=>p.subject).join(', ');
+      const onclick=cnt?`showHMPopup('${cls}','${ds}')`:'';
+      html+=`<td class="${hmCls} ${wkCls}${todayCls}" data-hmcol="${ci}" title="${title}"`
+        +` onmouseenter="hmHoverCol(${ci},true)" onmouseleave="hmHoverCol(${ci},false)"`
+        +` onclick="${onclick}">${cnt||''}</td>`;
+    }
+    html+=`</tr>`;
+  }
+  html+=`</tbody></table></div>`;
+
+  // 범례
+  html+=`<div style="display:flex;gap:12px;margin-top:10px;font-size:11px;align-items:center;flex-wrap:wrap;">
+    <span style="background:#bbf7d0;padding:2px 8px;border-radius:4px;font-weight:700;">1건</span>
+    <span style="background:#fde68a;padding:2px 8px;border-radius:4px;font-weight:700;">2건</span>
+    <span style="background:#fca5a5;padding:2px 8px;border-radius:4px;font-weight:700;">3건 이상 ⚠️</span>
+    <span style="color:var(--text-muted);">셀 클릭 시 교과 목록 확인</span>
+  </div>`;
+
+  grid.innerHTML=html;
+}
+
+// 히트맵 열 hover 부각
+window.hmHoverCol = function(colIdx, on){
+  document.querySelectorAll(`[data-hmcol="${colIdx}"]`).forEach(el=>{
+    if(on) el.classList.add('hm-col-hover');
+    else   el.classList.remove('hm-col-hover');
+  });
+};
+
+// 히트맵 셀 클릭 — 기존 스타일 모달
+window.showHMPopup = function(cls, ds){
+  const items = paArray().filter(p=>
+    p.date===ds && p.classes && p.classes.split(',').map(c=>c.trim()).includes(cls)
+  );
+  if(!items.length) return;
+  const d = new Date(ds+'T00:00:00');
+  const DOW=['일','월','화','수','목','금','토'];
+  const dateLabel = `${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
+
+  document.getElementById('hmDetailTitle').textContent = `📚 ${cls} 수행평가`;
+  document.getElementById('hmDetailSubtitle').textContent = `📅 ${dateLabel} — 총 ${items.length}건`;
+
+  // 교시 기준으로 정렬 (교시 없으면 뒤로)
+  const sorted = [...items].sort((a,b)=>{
+    const pa = a.period ? parseInt(a.period.split(',')[0]) : 99;
+    const pb = b.period ? parseInt(b.period.split(',')[0]) : 99;
+    return pa-pb;
+  });
+
+  const body = sorted.map(p=>{
+    const periodStr = p.period
+      ? p.period.split(',').map(v=>v.trim()).filter(Boolean).map(v=>v+'교시').join('·')
+      : null;
+    const periodBadge = periodStr
+      ? `<span class="hm-popup-period">${periodStr}</span>`
+      : `<span class="hm-popup-no-period">교시 미정</span>`;
+    const teacherRow = p.teacher
+      ? `<div class="hm-popup-teacher">👤 ${p.teacher}</div>` : '';
+    return `<div class="hm-popup-item">
+      ${periodBadge}
+      <div>
+        <div class="hm-popup-subj">${p.subject}</div>
+        ${teacherRow}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('hmDetailBody').innerHTML = body;
+  openModal('hmDetailModal');
+};
+
+// 뷰·정렬 전환
+window.setPAView = function(v){
+  paView=v;
+  renderPA();
+};
+window.setPASort = function(v){
+  paSort=v;
+  renderPA();
+};
 
 // ══════════════════════════════════════════════════════
 // Firebase CRUD — 월중계획
@@ -1708,7 +2202,9 @@ window.openAddEventForDate = function(ds) {
   document.getElementById('evEditId').value='';
   document.getElementById('evModalTitle').textContent='+ 일정 추가';
   document.getElementById('evDate').value=ds;
+  document.getElementById('evEndDate').value=ds;
   ['evTitle','evDept','evPlace','evMemo'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.evPeriodCheck').forEach(cb=>cb.checked=false);
   document.getElementById('evType').value='student';
   ['evGrade1','evGrade2','evGrade3'].forEach(id=>document.getElementById(id).checked=false);
   document.getElementById('evDeleteBtn').style.display='none';
@@ -1718,7 +2214,9 @@ window.openAddEventModal = function() {
   document.getElementById('evEditId').value='';
   document.getElementById('evModalTitle').textContent='+ 일정 추가';
   document.getElementById('evDate').value=todayStr;
+  document.getElementById('evEndDate').value=todayStr;
   ['evTitle','evDept','evPlace','evMemo'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.evPeriodCheck').forEach(cb=>cb.checked=false);
   document.getElementById('evType').value='student';
   ['evGrade1','evGrade2','evGrade3'].forEach(id=>document.getElementById(id).checked=false);
   document.getElementById('evDeleteBtn').style.display='none';
@@ -1729,8 +2227,11 @@ window.openEditEventModal = function(id) {
   document.getElementById('evEditId').value=id;
   document.getElementById('evModalTitle').textContent='✏️ 일정 수정';
   document.getElementById('evDate').value=ev.start;
+  document.getElementById('evEndDate').value=ev.end||ev.start;
   document.getElementById('evTitle').value=ev.title;
-  document.getElementById('evType').value=ev.type||'haksa';
+  const _evps=(ev.period||'').split(',').map(s=>s.trim()).filter(Boolean);
+  document.querySelectorAll('.evPeriodCheck').forEach(cb=>cb.checked=_evps.includes(cb.value));
+  document.getElementById('evType').value=ev.type||'student';
   const _gs=(ev.grade||'').split(',').map(s=>s.trim());
   ['evGrade1','evGrade2','evGrade3'].forEach(id=>{const el=document.getElementById(id);el.checked=_gs.includes(el.value);});
   document.getElementById('evDept').value=ev.dept||'';
@@ -1742,11 +2243,14 @@ window.openEditEventModal = function(id) {
 window.saveEvent = async function() {
   if(!db){alert('Firebase가 연결되지 않았습니다. ⚙️ Firebase 설정 탭을 확인하세요.');return;}
   const date=document.getElementById('evDate').value;
+  const endDate=document.getElementById('evEndDate').value||date;
   const title=document.getElementById('evTitle').value.trim();
   if(!date||!title){alert('날짜와 행사명을 입력하세요.');return;}
+  if(endDate<date){alert('종료일이 시작일보다 빠릅니다.');return;}
   const id=document.getElementById('evEditId').value;
   const obj={
-    start:date,end:date,title,
+    start:date, end:endDate, title,
+    period:[...document.querySelectorAll('.evPeriodCheck:checked')].map(cb=>cb.value).join(','),
     type:document.getElementById('evType').value,
     grade:['evGrade1','evGrade2','evGrade3'].filter(id=>document.getElementById(id).checked).map(id=>document.getElementById(id).value).join(','),
     dept:document.getElementById('evDept').value.trim(),
@@ -1765,6 +2269,109 @@ window.deleteEvent = async function() {
   await remove(ref(db,'monthly/'+id));
   closeModal('addEventModal');
 };
+
+// ══════════════════════════════════════════════════════
+// 관리자복무 뷰 / 간트 차트
+// ══════════════════════════════════════════════════════
+const DUTY_PERSONS = ['교장','1캠교감','2캠교감','교감'];
+const DUTY_COLORS  = {
+  출장:'#3b82f6', 연가:'#22c55e', 병가:'#ef4444',
+  공가:'#8b5cf6', 특별휴가:'#f59e0b',
+  지각:'#f97316', 조퇴:'#0ea5e9', 기타:'#6b7280'
+};
+
+window.setDutyView = function(v){
+  dutyView = v;
+  document.getElementById('dutyViewList').className ='view-btn'+(v==='list'?' active':'');
+  document.getElementById('dutyViewGantt').className='view-btn'+(v==='gantt'?' active':'');
+  document.getElementById('dutyListView').style.display  = v==='list'  ? 'flex' : 'none';
+  document.getElementById('dutyGanttView').style.display = v==='gantt' ? '' : 'none';
+  document.getElementById('ganttNav').style.display      = v==='gantt' ? 'flex' : 'none';
+  if(v==='gantt') renderDutyGantt();
+};
+
+// 월 단위 고정 — 주 단위 제거
+window.moveGantt = function(dir){
+  const d = new Date(ganttAnchor+'T00:00:00');
+  d.setMonth(d.getMonth()+dir);
+  ganttAnchor = d.toISOString().slice(0,10);
+  renderDutyGantt();
+};
+
+function ganttDates(){
+  const anchor = new Date(ganttAnchor+'T00:00:00');
+  const yr=anchor.getFullYear(), mo=anchor.getMonth();
+  const days=new Date(yr,mo+1,0).getDate();
+  return Array.from({length:days},(_,i)=>`${yr}-${S2(mo+1)}-${S2(i+1)}`);
+}
+
+// 간트 셀 더블클릭 → 해당 날짜+사람 미리채운 추가 모달
+window.addDutyFromGantt = function(person, ds){
+  document.getElementById('dutyEditId').value='';
+  document.getElementById('dutyStartDate').value=ds;
+  document.getElementById('dutyEndDate').value=ds;
+  document.getElementById('dutyPerson').value=person;
+  document.getElementById('dutyKind').value='출장';
+  ['dutyReason','dutyFrom','dutyTo','dutyPlace','dutyDeputy'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('dutyDeleteBtn').style.display='none';
+  openModal('addDutyModal');
+};
+
+function renderDutyGantt(){
+  const dates = ganttDates();
+  const first = new Date(dates[0]+'T00:00:00');
+  const DOW=['일','월','화','수','목','금','토'];
+
+  // 타이틀 — 월 단위만
+  document.getElementById('ganttTitle').textContent=
+    `${first.getFullYear()}년 ${first.getMonth()+1}월`;
+
+  // 이 달의 복무 기록
+  const duties = dutyArray().filter(r=>r.date<=dates[dates.length-1]&&(r.endDate||r.date)>=dates[0]);
+
+  // 테이블: 첫 열 고정폭, 나머지 균등 분배
+  let html=`<table class="gantt-table"><thead><tr><th class="gantt-row-hdr">관리자</th>`;
+  for(const ds of dates){
+    const d=new Date(ds+'T00:00:00');
+    const dow=d.getDay();
+    const isToday=ds===todayStr;
+    const isWknd=dow===0||dow===6;
+    html+=`<th style="color:${dow===0?'#ef4444':dow===6?'#3b82f6':'inherit'};${isToday?'background:#ede9fe;':''}${isWknd?'background:#f3f4f6;':''}">`
+      +`${d.getDate()}<br><span style="font-size:8px;font-weight:400;">${DOW[dow]}</span></th>`;
+  }
+  html+=`</tr></thead><tbody>`;
+
+  for(const person of DUTY_PERSONS){
+    html+=`<tr><td class="gantt-row-hdr">${personLabel(person)}</td>`;
+    for(const ds of dates){
+      const d=new Date(ds+'T00:00:00'); const dow=d.getDay();
+      const isWknd=dow===0||dow===6;
+      const isToday=ds===todayStr;
+      const dayDuties=duties.filter(r=>r.person===person&&dutyInDate(r,ds));
+      let cellHtml='';
+      if(dayDuties.length){
+        const r=dayDuties[0];
+        const col=DUTY_COLORS[r.kind]||DUTY_COLORS['기타'];
+        const label=r.kind.length>2?r.kind.slice(0,2):r.kind;
+        cellHtml=`<div class="gantt-bar" style="background:${col};"
+          title="${r.kind}${r.reason?': '+r.reason:''}${r.place?' 📍'+r.place:''}"
+          onclick="event.stopPropagation();openEditDutyModal('${r.id}')">${label}</div>`;
+      }
+      html+=`<td class="gantt-cell-dbl ${isWknd?'gantt-wknd':''} ${isToday?'gantt-today':''}"
+        ondblclick="addDutyFromGantt('${person}','${ds}')">${cellHtml}</td>`;
+    }
+    html+=`</tr>`;
+  }
+  html+=`</tbody></table>`;
+
+  document.getElementById('ganttWrap').innerHTML=html;
+
+  // 범례
+  document.getElementById('ganttLegend').innerHTML=
+    Object.entries(DUTY_COLORS).map(([k,c])=>
+      `<div class="gantt-legend-item"><div class="gantt-legend-dot" style="background:${c}"></div>${k}</div>`
+    ).join('');
+}
 
 // ══════════════════════════════════════════════════════
 // Firebase CRUD — 관리자복무
@@ -1831,6 +2438,7 @@ window.openAddPAModal = function() {
   document.getElementById('paEditId').value='';
   document.getElementById('paDate').value=todayStr;
   ['paSubject','paTeacher','paMemo','paClasses'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.paPeriodCheck').forEach(cb=>cb.checked=false);
   document.getElementById('paDeleteBtn').style.display='none';
   openModal('addPAModal');
 };
@@ -1842,6 +2450,8 @@ window.openEditPAModal = function(id) {
   document.getElementById('paTeacher').value=p.teacher||'';
   document.getElementById('paMemo').value=p.memo||'';
   document.getElementById('paClasses').value=p.classes||'';
+  const _pp=(p.period||'').split(',').map(s=>s.trim()).filter(Boolean);
+  document.querySelectorAll('.paPeriodCheck').forEach(cb=>cb.checked=_pp.includes(cb.value));
   document.getElementById('paDeleteBtn').style.display='block';
   openModal('addPAModal');
 };
@@ -1856,6 +2466,7 @@ window.savePA = async function() {
     teacher:document.getElementById('paTeacher').value.trim(),
     memo:document.getElementById('paMemo').value.trim(),
     classes:document.getElementById('paClasses').value.trim(),
+    period:[...document.querySelectorAll('.paPeriodCheck:checked')].map(cb=>cb.value).join(','),
     updatedAt:Date.now()
   };
   const saveRef = id ? ref(db,'pa/'+id) : push(ref(db,'pa'));
@@ -1888,6 +2499,10 @@ window.openWkCellModal = function(dept, day) {
   // 요일 체크박스: 더블클릭한 요일만 체크
   document.querySelectorAll('.wkDayCheck').forEach(cb => { cb.checked = (cb.value === day); });
 
+  // 교시 체크박스: 해당 요일의 period 복원
+  const _wp=(e['period_'+day]||'').split(',').map(s=>s.trim()).filter(Boolean);
+  document.querySelectorAll('.wkPeriodCheck').forEach(cb=>cb.checked=_wp.includes(cb.value));
+
   document.getElementById('wkCellContent').value      = e[day] || '';
   document.getElementById('wkCellWeekInfo').textContent = `📅 ${fd(sun)} ~ ${fd(sat)}`;
   document.getElementById('wkCellDeleteBtn').style.display = e[day] ? 'block' : 'none';
@@ -1900,10 +2515,17 @@ window.saveWkCell = async function() {
   const content = document.getElementById('wkCellContent').value.trim();
   const checkedDays = [...document.querySelectorAll('.wkDayCheck:checked')].map(cb => cb.value);
   if(checkedDays.length === 0){alert('요일을 하나 이상 선택하세요.');return;}
+  const checkedPeriods = [...document.querySelectorAll('.wkPeriodCheck:checked')].map(cb=>cb.value).join(',');
   const existing = {...((allWeeklyData[viewWeekKey] || {})[dept]) || {}};
   checkedDays.forEach(d => {
-    if(content) existing[d] = content;
-    else delete existing[d]; // 내용 없으면 해당 요일 삭제
+    if(content) {
+      existing[d] = content;
+      if(checkedPeriods) existing['period_'+d] = checkedPeriods;
+      else delete existing['period_'+d];
+    } else {
+      delete existing[d];
+      delete existing['period_'+d];
+    }
   });
   existing.updatedAt = Date.now();
   await set(ref(db, 'weekly/' + viewWeekKey + '/' + dept), existing);
@@ -1916,7 +2538,7 @@ window.deleteWkCell = async function() {
   const checkedDays = [...document.querySelectorAll('.wkDayCheck:checked')].map(cb => cb.value);
   if(checkedDays.length === 0){alert('삭제할 요일을 선택하세요.');return;}
   const existing = {...((allWeeklyData[viewWeekKey] || {})[dept]) || {}};
-  checkedDays.forEach(d => delete existing[d]);
+  checkedDays.forEach(d => { delete existing[d]; delete existing['period_'+d]; });
   existing.updatedAt = Date.now();
   await set(ref(db, 'weekly/' + viewWeekKey + '/' + dept), existing);
   closeModal('wkCellModal');
