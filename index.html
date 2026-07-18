@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.7                           ║
-     ║  2026-07-09                                     ║
+     ║  areum dashboard v2.9 / PA v3.2                 ║
+     ║  2026-07-18                                     ║
+     ║  v3.2: 수행평가 교시별 학급 매트릭스 입력          ║
+     ║        groupId 기반 레코드 분리 저장              ║
+     ║  v2.9: 월중계획 별도 수행평가 추가 버튼            ║
+     ║  v2.8: 월중계획↔수행평가 양방향 연동 등록         ║
      ║  v2.7: 월간뷰 hover 크로스헤어, 팝업 모달화       ║
      ║  v2.6: 관리자복무 기간 지정 기능 추가            ║
      ║       시작일~종료일 범위로 오늘·달력 전체 적용   ║
@@ -15,7 +19,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.7</title>
+<title>areum dashboard v2.9</title>
 <style>
 /* ═══════════════════════════════════════════════
    CSS 변수 & 리셋
@@ -359,6 +363,73 @@ textarea{resize:vertical;}
 }
 .hm-popup-subj { font-size:13px; font-weight:800; color:var(--text-main); }
 .hm-popup-teacher { font-size:11px; color:var(--text-muted); margin-top:2px; }
+/* 교과 빠른선택 버튼 */
+.subj-quick{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;}
+.subj-btn{border:1.5px solid var(--border);background:var(--gray-light);border-radius:6px;
+  padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text-main);
+  transition:.12s;line-height:1.5;}
+.subj-btn:hover{background:var(--primary-light);border-color:var(--primary);}
+.subj-btn.active{background:var(--purple);color:#fff;border-color:var(--purple);}
+/* 학급 체크박스 그리드 */
+.class-grid{display:flex;flex-direction:column;gap:5px;margin-top:2px;}
+.class-grade-group{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+.class-grade-label{font-size:11px;font-weight:800;color:var(--text-muted);min-width:34px;flex-shrink:0;}
+/* 학급 컴팩트 숫자 버튼 (동적 생성용) */
+.cls-num-btn{display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:6px;cursor:pointer;
+  border:1px solid var(--border);background:var(--gray-light);
+  font-size:11px;font-weight:700;user-select:none;color:var(--text-main);}
+.cls-num-btn:has(input:checked){background:var(--purple);color:#fff;border-color:var(--purple);}
+.cls-num-btn input{display:none;}
+.cls-num-btn.selected{background:var(--purple);color:#fff;border-color:var(--purple);}
+/* 교시별 학급 매트릭스 (v3.2) */
+.pm-row{border:1px solid var(--border);border-radius:8px;margin-bottom:5px;overflow:hidden;}
+.pm-header{display:flex;align-items:center;gap:8px;padding:7px 11px;
+  background:var(--gray-light);cursor:pointer;transition:.1s;user-select:none;}
+.pm-header:hover{background:var(--primary-light);}
+.pm-period-label{font-size:12px;font-weight:800;color:var(--purple);min-width:38px;}
+.pm-sel-count{font-size:11px;color:var(--text-muted);flex:1;}
+.pm-sel-count.has-sel{color:var(--purple);font-weight:700;}
+.pm-chevron{font-size:9px;color:var(--text-muted);}
+.pm-body{padding:8px 10px;border-top:1px solid var(--border);background:#fff;}
+.pm-grade-row{display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin-bottom:4px;}
+.pm-grade-lbl{font-size:10px;font-weight:800;color:var(--text-muted);min-width:30px;flex-shrink:0;}
+.pm-all-btn{font-size:9px;font-weight:700;color:var(--primary);
+  border:1px solid var(--primary-light);border-radius:4px;padding:1px 5px;
+  background:var(--primary-light);cursor:pointer;flex-shrink:0;}
+.pm-all-btn:hover{background:var(--primary);color:#fff;}
+.pm-clear-row{margin-top:5px;text-align:right;}
+.pm-clear-btn{font-size:10px;color:var(--text-muted);background:none;border:none;
+  text-decoration:underline;cursor:pointer;padding:0;}
+.pm-clear-btn:hover{color:var(--red);}
+/* 담임 뷰 학년 탭 */
+.pa-grade-tab{padding:4px 12px;border:1px solid var(--border);border-radius:7px;
+  background:var(--gray-light);color:var(--text-muted);font-size:12px;font-weight:700;
+  cursor:pointer;transition:.1s;}
+.pa-grade-tab.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary);}
+/* 담임 학급별 뷰 카드 */
+.pa-class-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;}
+.pa-class-card{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;}
+.pa-class-today{border-color:var(--purple);background:#faf5ff;}
+.pa-class-date{font-size:12px;font-weight:800;color:var(--text-main);
+  margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.pa-class-row{display:flex;align-items:center;gap:7px;padding:4px 6px;
+  border-radius:6px;cursor:pointer;transition:.1s;}
+.pa-class-row:hover{background:var(--primary-light);}
+.pa-class-period{flex-shrink:0;background:var(--purple);color:#fff;
+  font-size:10px;font-weight:800;border-radius:5px;padding:2px 6px;white-space:nowrap;}
+.pa-class-subject{font-size:12px;font-weight:700;color:var(--text-main);}
+.pa-class-teacher{font-size:11px;color:var(--text-muted);}
+/* PA 연동 패널 (이벤트 모달 안) */
+.pa-link-toggle-row{display:flex;align-items:center;gap:8px;
+  margin:10px 0 0;padding:9px 12px;border-radius:8px;
+  background:var(--primary-light);border:1.5px solid var(--border);cursor:pointer;}
+.pa-link-toggle-row input[type=checkbox]{accent-color:var(--purple);width:16px;height:16px;cursor:pointer;}
+.pa-link-toggle-label{font-size:13px;font-weight:700;color:var(--purple);cursor:pointer;user-select:none;}
+.pa-link-panel{background:#faf5ff;border:1.5px solid #c4b5fd;
+  border-radius:8px;padding:12px 14px;margin-top:8px;}
+.pa-link-panel .form-row{margin-bottom:8px;}
+.pa-link-panel .form-row:last-child{margin-bottom:0;}
 /* ── 관리자복무 간트 ── */
 .gantt-wrap{overflow-x:auto;margin-top:4px;width:100%;}
 .gantt-table{border-collapse:collapse;font-size:11px;table-layout:fixed;width:100%;}
@@ -590,14 +661,20 @@ textarea{resize:vertical;}
           <button onclick="nextMonth()">▶</button>
         </div>
       </div>
-      <button class="sbtn sbtn-p" onclick="openAddEventModal()">+ 일정 추가</button>
+      <div style="display:flex;gap:6px;">
+        <button class="sbtn sbtn-p" onclick="openAddEventModal()">+ 일정 추가</button>
+        <button class="sbtn" style="background:#7c3aed;color:#fff;" onclick="openAddPAModal()">+ 수행평가</button>
+      </div>
     </div>
     <div class="card-body"><div class="cal-grid" id="calGrid"></div></div>
   </div>
   <div class="card">
     <div class="card-hdr">
       <div class="card-ttl" id="calSelTitle">날짜를 클릭하세요</div>
-      <button class="sbtn sbtn-p" id="calAddBtn" style="display:none" onclick="openAddEventForDate()">+ 일정 추가</button>
+      <div id="calAddBtnGroup" style="display:none;gap:6px;display:none;">
+        <button class="sbtn sbtn-p" id="calAddBtn" onclick="openAddEventForDate()">+ 일정 추가</button>
+        <button class="sbtn" id="calAddPaBtn" style="background:#7c3aed;color:#fff;" onclick="openAddPAForDate()">+ 수행평가</button>
+      </div>
     </div>
     <div class="card-body" id="calSelList"><div class="empty">날짜를 클릭하면 일정이 표시됩니다.</div></div>
   </div>
@@ -702,11 +779,15 @@ textarea{resize:vertical;}
     </select>
     <!-- 뷰 토글 -->
     <div class="view-toggle">
-      <button id="paViewList" class="view-btn active" onclick="setPAView('list')">📋 목록</button>
-      <button id="paViewHeat" class="view-btn" onclick="setPAView('heatmap')">📅 월간</button>
+      <button id="paViewList" class="view-btn" onclick="setPAView('list')">📋 목록</button>
+      <button id="paViewHeat" class="view-btn active" onclick="setPAView('heatmap')">📅 월간</button>
+      <button id="paViewCls" class="view-btn" onclick="setPAView('class')">👨‍🏫 학급별</button>
     </div>
     <button class="sbtn sbtn-p" onclick="openAddPAModal()" style="margin-left:auto;">+ 수행평가 추가</button>
   </div>
+  <!-- 담임 학급별 뷰 네비게이션 (학급별 뷰에서만 표시) -->
+  <div id="paClassNav" style="display:none;background:white;padding:10px 14px;
+    border-radius:10px;border:1px solid var(--border);margin-bottom:10px;"></div>
   <div id="paGrid"><div class="empty">수행평가 데이터 없음</div></div>
 </div>
 
@@ -729,6 +810,40 @@ textarea{resize:vertical;}
     </div>
     <div id="fbStatusBox" style="margin-top:10px;"></div>
   </div>
+
+  <!-- 학교 구조 설정 -->
+  <div class="setup-box" style="margin-top:14px;">
+    <h3>🏫 학교 구조 설정</h3>
+    <p style="font-size:12px;color:#1e3a5f;margin-bottom:12px;">
+      학년별 학급 수를 입력하세요. Firebase에 저장되어 모든 기기에서 공유됩니다.
+    </p>
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:13px;font-weight:700;color:var(--text-main);">1학년</label>
+        <input id="sc_grade1" type="number" min="1" max="30"
+          style="width:60px;border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;
+          font-size:14px;font-weight:700;text-align:center;" value="14"/>
+        <span style="font-size:12px;color:var(--text-muted);">반</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:13px;font-weight:700;color:var(--text-main);">2학년</label>
+        <input id="sc_grade2" type="number" min="1" max="30"
+          style="width:60px;border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;
+          font-size:14px;font-weight:700;text-align:center;" value="17"/>
+        <span style="font-size:12px;color:var(--text-muted);">반</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:13px;font-weight:700;color:var(--text-main);">3학년</label>
+        <input id="sc_grade3" type="number" min="1" max="30"
+          style="width:60px;border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;
+          font-size:14px;font-weight:700;text-align:center;" value="17"/>
+        <span style="font-size:12px;color:var(--text-muted);">반</span>
+      </div>
+    </div>
+    <button class="btn btn-p" onclick="saveSchoolConfig()">💾 저장</button>
+    <span id="scStatus" style="margin-left:10px;font-size:12px;color:var(--green);"></span>
+  </div>
+
   <div class="card">
     <div class="card-hdr"><div class="card-ttl">📖 Firebase 설정 방법</div></div>
     <div class="card-body" style="font-size:13px;line-height:1.8;color:#374151;">
@@ -957,28 +1072,43 @@ textarea{resize:vertical;}
 
 <!-- 수행평가 추가 모달 -->
 <div class="overlay" id="addPAModal">
-  <div class="modal">
+  <div class="modal" style="max-width:520px;">
     <div class="modal-ttl" id="paModalTitle">📝 수행평가 추가</div>
     <input type="hidden" id="paEditId">
-    <div class="g2">
-      <div class="form-row"><label>교과 *</label><input id="paSubject" placeholder="국어"/></div>
-      <div class="form-row"><label>담당교사</label><input id="paTeacher" placeholder="홍길동"/></div>
+    <input type="hidden" id="paEditGroupId">
+    <!-- 교과 빠른선택 -->
+    <div class="form-row">
+      <label>교과 *</label>
+      <div class="subj-quick">
+        <button type="button" class="subj-btn" data-subj="국어" onclick="selectSubject('국어')">국어</button>
+        <button type="button" class="subj-btn" data-subj="수학" onclick="selectSubject('수학')">수학</button>
+        <button type="button" class="subj-btn" data-subj="영어" onclick="selectSubject('영어')">영어</button>
+        <button type="button" class="subj-btn" data-subj="과학" onclick="selectSubject('과학')">과학</button>
+        <button type="button" class="subj-btn" data-subj="사회" onclick="selectSubject('사회')">사회</button>
+        <button type="button" class="subj-btn" data-subj="역사" onclick="selectSubject('역사')">역사</button>
+        <button type="button" class="subj-btn" data-subj="도덕" onclick="selectSubject('도덕')">도덕</button>
+        <button type="button" class="subj-btn" data-subj="음악" onclick="selectSubject('음악')">음악</button>
+        <button type="button" class="subj-btn" data-subj="미술" onclick="selectSubject('미술')">미술</button>
+        <button type="button" class="subj-btn" data-subj="체육" onclick="selectSubject('체육')">체육</button>
+        <button type="button" class="subj-btn" data-subj="기술가정" onclick="selectSubject('기술가정')">기술가정</button>
+        <button type="button" class="subj-btn" data-subj="정보" onclick="selectSubject('정보')">정보</button>
+        <button type="button" class="subj-btn" data-subj="한문" onclick="selectSubject('한문')">한문</button>
+      </div>
+      <input id="paSubject" placeholder="직접 입력 또는 위에서 선택" oninput="clearSubjBtn()"/>
     </div>
+    <!-- 담당교사 + 날짜 -->
     <div class="g2">
-      <div class="form-row"><label>대상반 (쉼표 구분)</label><input id="paClasses" placeholder="1-1, 1-2, 1-3"/></div>
+      <div class="form-row">
+        <label>담당교사</label>
+        <input id="paTeacher" placeholder="홍길동" list="paTeacherList"/>
+        <datalist id="paTeacherList"></datalist>
+      </div>
       <div class="form-row"><label>날짜</label><input type="date" id="paDate"/></div>
     </div>
+    <!-- 교시별 대상 학급 매트릭스 (v3.2 — 교시 클릭 후 반 선택) -->
     <div class="form-row">
-      <label>교시</label>
-      <div class="day-checks">
-        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="1"> 1교시</label>
-        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="2"> 2교시</label>
-        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="3"> 3교시</label>
-        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="4"> 4교시</label>
-        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="5"> 5교시</label>
-        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="6"> 6교시</label>
-        <label class="day-check-lbl"><input type="checkbox" class="paPeriodCheck" value="7"> 7교시</label>
-      </div>
+      <label>교시별 대상 학급 <span style="font-size:10px;color:var(--text-muted);font-weight:400;">▶ 교시를 클릭해 펼친 후 반을 선택하세요</span></label>
+      <div id="paPeriodMatrix"></div>
     </div>
     <div class="form-row"><label>내용</label><input id="paMemo" placeholder="논술·서술 등 평가 내용"/></div>
     <div class="form-actions">
@@ -1356,7 +1486,7 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v2.7';
+const APP_VERSION = 'v3.1';
 const APP_DATE    = '2026-07-09';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
@@ -1449,6 +1579,20 @@ function startListeners() {
   onValue(mealRef, snap => {
     allMeal = snap.val() || {};
     if(activeTab === 'today') renderMealSection();
+  });
+
+  // 학교 구조 설정
+  const scRef = ref(db, 'settings/school');
+  onValue(scRef, snap => {
+    const val = snap.val();
+    if(val && val.grade1) {
+      schoolConfig = { grade1: val.grade1||14, grade2: val.grade2||17, grade3: val.grade3||17 };
+      // 설정 탭 입력칸에 반영
+      ['grade1','grade2','grade3'].forEach(k => {
+        const el = document.getElementById('sc_'+k);
+        if(el) el.value = schoolConfig[k];
+      });
+    }
   });
 
   updateSyncBadge('실시간 동기화 중', true);
@@ -1746,8 +1890,8 @@ let selectedCalDate = null;
 
 window.showDay = function(ds) {
   selectedCalDate = ds;
-  const btn = document.getElementById('calAddBtn');
-  if(btn) btn.style.display = 'block';
+  const grp = document.getElementById('calAddBtnGroup');
+  if(grp) grp.style.display = 'flex';
   document.getElementById('calSelTitle').textContent = fmtDateFull(ds) + ' 일정';
   const dayEvs  = eventsArray().filter(e=>e.start<=ds&&(e.end||e.start)>=ds);
   const dayDuty = dutyArray().filter(r=>dutyInDate(r,ds));
@@ -1807,6 +1951,12 @@ window.showDay = function(ds) {
 };
 
 // ══════════════════════════════════════════════════════
+// 학교 구조 (Firebase /settings/school 에서 로드, 기본값 사용 가능)
+let schoolConfig = { grade1: 14, grade2: 17, grade3: 17 };
+// 담임 뷰 상태
+let selectedPAGrade = 1;  // 선택된 학년 탭 (1/2/3)
+let selectedPAClass = ''; // 선택된 학급 예: '2-6'
+
 // 주간업무
 // ══════════════════════════════════════════════════════
 const ALL_DEPTS = ['1학년부','2학년부','3학년부','교무부','교육과정부','연구평가부',
@@ -1985,8 +2135,14 @@ function renderPA() {
   // 뷰 토글 버튼 상태
   document.getElementById('paViewList').className='view-btn'+(paView==='list'?' active':'');
   document.getElementById('paViewHeat').className='view-btn'+(paView==='heatmap'?' active':'');
-  // 정렬 드롭다운 표시/숨김
+  document.getElementById('paViewCls').className='view-btn'+(paView==='class'?' active':'');
+  // 정렬 드롭다운 / 담임 뷰 네비 표시
   document.getElementById('paSortSel').style.display = paView==='list' ? '' : 'none';
+  const _clsNav = document.getElementById('paClassNav');
+  if(_clsNav) {
+    _clsNav.style.display = paView==='class' ? '' : 'none';
+    if(paView==='class') rebuildClassNav();
+  }
 
   const monthStr=`${paCal.year}-${S2(paCal.month+1)}`;
   const monthPAs=paArray().filter(p=>p.date&&p.date.startsWith(monthStr));
@@ -1995,6 +2151,11 @@ function renderPA() {
   if(paView==='heatmap'){
     grid.className='';
     renderPAHeatmap(monthPAs, monthStr, grid);
+    return;
+  }
+  if(paView==='class'){
+    grid.className='';
+    renderPAClassView(monthPAs, grid);
     return;
   }
 
@@ -2184,6 +2345,61 @@ window.showHMPopup = function(cls, ds){
   openModal('hmDetailModal');
 };
 
+// ── 담임 학급별 뷰 ──
+function renderPAClassView(monthPAs, grid) {
+  const cls = selectedPAClass.trim();
+  if(!cls) {
+    grid.innerHTML = '<div class="empty">위에서 학년 탭을 선택한 후 반 번호를 클릭하세요 ▲</div>';
+    return;
+  }
+  const clsPAs = monthPAs.filter(p =>
+    p.classes && p.classes.split(',').map(c=>c.trim()).includes(cls)
+  );
+  if(!clsPAs.length) {
+    grid.innerHTML = `<div class="empty">${cls} — 이 달 수행평가 없음</div>`;
+    return;
+  }
+  // 날짜별 그룹
+  const byDate = {};
+  for(const p of clsPAs) {
+    if(!byDate[p.date]) byDate[p.date] = [];
+    byDate[p.date].push(p);
+  }
+  const DOW = ['일','월','화','수','목','금','토'];
+  const cards = Object.entries(byDate)
+    .sort(([a],[b]) => a.localeCompare(b))
+    .map(([date, items]) => {
+      const d = new Date(date+'T00:00:00');
+      const dow = DOW[d.getDay()];
+      const isToday = date === todayStr;
+      const dateLabel = `${d.getMonth()+1}/${d.getDate()}(${dow})`;
+      // 교시 순 정렬
+      const sorted = [...items].sort((a,b) => {
+        const pa = a.period ? parseInt(a.period.split(',')[0]) : 99;
+        const pb = b.period ? parseInt(b.period.split(',')[0]) : 99;
+        return pa - pb;
+      });
+      const rows = sorted.map(p => {
+        const periodStr = p.period
+          ? p.period.split(',').map(v=>v.trim()).filter(Boolean).map(v=>v+'교시').join('·')
+          : '교시 미정';
+        const teacherSpan = p.teacher
+          ? `<span class="pa-class-teacher"> · ${p.teacher}</span>` : '';
+        const memoSpan = p.memo
+          ? `<span style="font-size:10px;color:var(--text-muted);"> (${p.memo})</span>` : '';
+        return `<div class="pa-class-row" onclick="openEditPAModal('${p.id}')">
+          <span class="pa-class-period">${periodStr}</span>
+          <span class="pa-class-subject">${p.subject}${memoSpan}</span>${teacherSpan}
+        </div>`;
+      }).join('');
+      return `<div class="pa-class-card${isToday?' pa-class-today':''}">
+        <div class="pa-class-date">${isToday?'⭐ ':''}${dateLabel}</div>
+        ${rows}
+      </div>`;
+    }).join('');
+  grid.innerHTML = `<div class="pa-class-view">${cards}</div>`;
+}
+
 // 뷰·정렬 전환
 window.setPAView = function(v){
   paView=v;
@@ -2268,6 +2484,21 @@ window.deleteEvent = async function() {
   if(!id||!confirm('삭제하시겠습니까?'))return;
   await remove(ref(db,'monthly/'+id));
   closeModal('addEventModal');
+};
+
+// 월중계획에서 날짜 지정 수행평가 추가
+window.openAddPAForDate = function(ds) {
+  ds = ds || selectedCalDate || todayStr;
+  document.getElementById('paEditId').value='';
+  document.getElementById('paEditGroupId').value='';
+  document.getElementById('paDate').value=ds;
+  ['paSubject','paTeacher','paMemo'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.subj-btn[data-subj]').forEach(b=>b.classList.remove('active'));
+  buildPeriodMatrix();
+  document.getElementById('paDeleteBtn').style.display='none';
+  document.getElementById('paModalTitle').textContent='📝 수행평가 추가';
+  _fillTeacherList();
+  openModal('addPAModal');
 };
 
 // ══════════════════════════════════════════════════════
@@ -2436,10 +2667,14 @@ window.deleteDuty = async function() {
 // ══════════════════════════════════════════════════════
 window.openAddPAModal = function() {
   document.getElementById('paEditId').value='';
+  document.getElementById('paEditGroupId').value='';
   document.getElementById('paDate').value=todayStr;
-  ['paSubject','paTeacher','paMemo','paClasses'].forEach(id=>document.getElementById(id).value='');
-  document.querySelectorAll('.paPeriodCheck').forEach(cb=>cb.checked=false);
+  ['paSubject','paTeacher','paMemo'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.subj-btn[data-subj]').forEach(b=>b.classList.remove('active'));
+  buildPeriodMatrix();
   document.getElementById('paDeleteBtn').style.display='none';
+  document.getElementById('paModalTitle').textContent='📝 수행평가 추가';
+  _fillTeacherList();
   openModal('addPAModal');
 };
 window.openEditPAModal = function(id) {
@@ -2449,10 +2684,38 @@ window.openEditPAModal = function(id) {
   document.getElementById('paSubject').value=p.subject||'';
   document.getElementById('paTeacher').value=p.teacher||'';
   document.getElementById('paMemo').value=p.memo||'';
-  document.getElementById('paClasses').value=p.classes||'';
-  const _pp=(p.period||'').split(',').map(s=>s.trim()).filter(Boolean);
-  document.querySelectorAll('.paPeriodCheck').forEach(cb=>cb.checked=_pp.includes(cb.value));
+  // 그룹 ID 설정
+  const groupId=p.groupId||'';
+  document.getElementById('paEditGroupId').value=groupId;
+  // 교시별 학급 매트릭스 빌드
+  buildPeriodMatrix();
+  // 같은 groupId를 가진 모든 레코드를 매트릭스에 복원
+  const siblings=groupId
+    ? Object.values(allPA).filter(r=>r.groupId===groupId)
+    : [p]; // groupId 없는 구형 레코드는 단일 처리
+  for(const rec of siblings) {
+    // 구형 레코드: period가 "1,3" 처럼 여러 개일 수 있음
+    const periods=(rec.period||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const classes=(rec.classes||'').split(',').map(c=>c.trim()).filter(Boolean);
+    for(const per of periods) {
+      const pn=parseInt(per);
+      if(pn>=1&&pn<=7) {
+        pmExpand(pn);
+        for(const cls of classes) {
+          const cb=document.querySelector(`.paClassCheck[data-period="${pn}"][value="${cls}"]`);
+          if(cb){cb.checked=true;}
+        }
+        pmUpdateCount(pn);
+      }
+    }
+  }
+  // 교과 빠른선택 active 복원
+  document.querySelectorAll('.subj-btn[data-subj]').forEach(b=>
+    b.classList.toggle('active', b.dataset.subj===(p.subject||''))
+  );
   document.getElementById('paDeleteBtn').style.display='block';
+  document.getElementById('paModalTitle').textContent='📝 수행평가 수정';
+  _fillTeacherList();
   openModal('addPAModal');
 };
 window.savePA = async function() {
@@ -2460,26 +2723,213 @@ window.savePA = async function() {
   const date=document.getElementById('paDate').value;
   const subject=document.getElementById('paSubject').value.trim();
   if(!date||!subject){alert('날짜와 교과를 입력하세요.');return;}
-  const id=document.getElementById('paEditId').value;
-  const obj={
-    date,subject,
-    teacher:document.getElementById('paTeacher').value.trim(),
-    memo:document.getElementById('paMemo').value.trim(),
-    classes:document.getElementById('paClasses').value.trim(),
-    period:[...document.querySelectorAll('.paPeriodCheck:checked')].map(cb=>cb.value).join(','),
-    updatedAt:Date.now()
-  };
-  const saveRef = id ? ref(db,'pa/'+id) : push(ref(db,'pa'));
-  await set(saveRef, obj);
+  const teacher=document.getElementById('paTeacher').value.trim();
+  const memo=document.getElementById('paMemo').value.trim();
+  const editId=document.getElementById('paEditId').value;
+  const editGroupId=document.getElementById('paEditGroupId').value;
+  // 교시별 학급 수집
+  const periodMap={};
+  for(let p=1;p<=7;p++){
+    const checked=[...document.querySelectorAll(`.paClassCheck[data-period="${p}"]:checked`)]
+      .map(cb=>cb.value);
+    if(checked.length>0) periodMap[p]=checked;
+  }
+  if(Object.keys(periodMap).length===0){alert('최소 한 교시 이상 반을 선택하세요.');return;}
+  // 새 그룹 ID 생성 (기존 있으면 유지)
+  const newGroupId=editGroupId||(Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  // 기존 레코드 삭제
+  if(editGroupId){
+    const toDelete=Object.entries(allPA)
+      .filter(([,r])=>r.groupId===editGroupId).map(([rid])=>rid);
+    await Promise.all(toDelete.map(rid=>remove(ref(db,'pa/'+rid))));
+  } else if(editId){
+    await remove(ref(db,'pa/'+editId));
+  }
+  // 교시별 레코드 생성
+  const ts=Date.now();
+  await Promise.all(Object.entries(periodMap).map(([period,classes])=>
+    set(push(ref(db,'pa')),{
+      date,subject,teacher,memo,
+      period:String(period),
+      classes:classes.join(','),
+      groupId:newGroupId,
+      updatedAt:ts
+    })
+  ));
   closeModal('addPAModal');
 };
 window.deletePA = async function() {
   if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
-  const id=document.getElementById('paEditId').value;
-  if(!id||!confirm('삭제?'))return;
-  await remove(ref(db,'pa/'+id));
+  const editId=document.getElementById('paEditId').value;
+  const editGroupId=document.getElementById('paEditGroupId').value;
+  if(editGroupId){
+    const toDelete=Object.entries(allPA)
+      .filter(([,r])=>r.groupId===editGroupId).map(([rid])=>rid);
+    const msg=toDelete.length>1
+      ?`이 수행평가 그룹 전체(${toDelete.length}개 교시 레코드)를 삭제할까요?`
+      :'삭제하시겠습니까?';
+    if(!confirm(msg))return;
+    await Promise.all(toDelete.map(rid=>remove(ref(db,'pa/'+rid))));
+  } else {
+    if(!editId||!confirm('삭제하시겠습니까?'))return;
+    await remove(ref(db,'pa/'+editId));
+  }
   closeModal('addPAModal');
 };
+
+// ── 학교 구조 기반 동적 UI 빌더 ──
+
+// 수행평가 입력 모달 — 교시별 학급 매트릭스 빌드 (v3.2)
+function buildPeriodMatrix() {
+  const container = document.getElementById('paPeriodMatrix');
+  if(!container) return;
+  let html='';
+  for(let p=1;p<=7;p++){
+    let gradeRows='';
+    for(let g=1;g<=3;g++){
+      const n=schoolConfig['grade'+g]||0;
+      if(!n) continue;
+      gradeRows+=`<div class="pm-grade-row">
+        <span class="pm-grade-lbl">${g}학년</span>
+        <button type="button" class="pm-all-btn" onclick="pmSelectGrade(${p},${g})">전체</button>`;
+      for(let i=1;i<=n;i++){
+        gradeRows+=`<label class="cls-num-btn"><input type="checkbox" class="paClassCheck" data-period="${p}" value="${g}-${i}" onchange="pmUpdateCount(${p})"> ${i}</label>`;
+      }
+      gradeRows+='</div>';
+    }
+    html+=`<div class="pm-row" id="pm-row-${p}">
+      <div class="pm-header" onclick="pmToggle(${p})">
+        <span class="pm-period-label">${p}교시</span>
+        <span class="pm-sel-count" id="pm-cnt-${p}">반 없음</span>
+        <span class="pm-chevron" id="pm-chev-${p}">▶</span>
+      </div>
+      <div class="pm-body" id="pm-body-${p}" style="display:none">
+        ${gradeRows}
+        <div class="pm-clear-row">
+          <button type="button" class="pm-clear-btn" onclick="pmClearPeriod(${p})">이 교시 해제</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  container.innerHTML=html;
+}
+window.pmToggle = function(p){
+  const body=document.getElementById('pm-body-'+p);
+  const chev=document.getElementById('pm-chev-'+p);
+  if(!body) return;
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'';
+  if(chev) chev.textContent=open?'▶':'▼';
+};
+function pmExpand(p){
+  const body=document.getElementById('pm-body-'+p);
+  const chev=document.getElementById('pm-chev-'+p);
+  if(body) body.style.display='';
+  if(chev) chev.textContent='▼';
+}
+window.pmSelectGrade = function(p,g){
+  pmExpand(p);
+  document.querySelectorAll(`.paClassCheck[data-period="${p}"]`).forEach(cb=>{
+    cb.checked=cb.value.startsWith(g+'-');
+  });
+  pmUpdateCount(p);
+};
+window.pmClearPeriod = function(p){
+  document.querySelectorAll(`.paClassCheck[data-period="${p}"]`).forEach(cb=>cb.checked=false);
+  pmUpdateCount(p);
+};
+window.pmUpdateCount = function(p){
+  const cnt=document.querySelectorAll(`.paClassCheck[data-period="${p}"]:checked`).length;
+  const el=document.getElementById('pm-cnt-'+p);
+  if(!el) return;
+  if(cnt>0){el.textContent=`${cnt}반 선택됨`;el.classList.add('has-sel');}
+  else{el.textContent='반 없음';el.classList.remove('has-sel');}
+};
+
+// 담임 뷰 네비게이션 — 학년 탭 + 반 번호 버튼 생성
+function rebuildClassNav() {
+  const nav = document.getElementById('paClassNav');
+  if(!nav) return;
+  let html = '<div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap;">';
+  for(let g=1; g<=3; g++) {
+    const active = selectedPAGrade===g ? ' active' : '';
+    html += `<button class="pa-grade-tab${active}" onclick="selectPAGrade(${g})">${g}학년</button>`;
+  }
+  html += '</div><div style="display:flex;gap:4px;flex-wrap:wrap;">';
+  const n = schoolConfig['grade'+selectedPAGrade] || 0;
+  for(let i=1; i<=n; i++) {
+    const cls = `${selectedPAGrade}-${i}`;
+    const sel = selectedPAClass===cls ? ' selected' : '';
+    html += `<button class="cls-num-btn${sel}" data-cls="${cls}" onclick="selectPAClass('${cls}')">${i}</button>`;
+  }
+  html += '</div>';
+  if(selectedPAClass) {
+    html += `<div style="margin-top:8px;font-size:12px;color:var(--purple);font-weight:700;">
+      📋 ${selectedPAClass}반 수행평가 목록
+    </div>`;
+  }
+  nav.innerHTML = html;
+}
+
+// 담임 뷰 — 학년 탭 선택
+window.selectPAGrade = function(g) {
+  selectedPAGrade = g;
+  // 같은 학년이 아닌 경우 학급 선택 초기화
+  if(selectedPAClass && !selectedPAClass.startsWith(g+'-')) selectedPAClass='';
+  rebuildClassNav();
+  const monthStr=`${paCal.year}-${S2(paCal.month+1)}`;
+  const monthPAs=paArray().filter(p=>p.date&&p.date.startsWith(monthStr));
+  renderPAClassView(monthPAs, document.getElementById('paGrid'));
+};
+
+// 담임 뷰 — 반 선택
+window.selectPAClass = function(cls) {
+  selectedPAClass = cls;
+  // 버튼 active 상태 업데이트
+  document.querySelectorAll('#paClassNav .cls-num-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.cls === cls);
+  });
+  const monthStr=`${paCal.year}-${S2(paCal.month+1)}`;
+  const monthPAs=paArray().filter(p=>p.date&&p.date.startsWith(monthStr));
+  renderPAClassView(monthPAs, document.getElementById('paGrid'));
+  rebuildClassNav(); // 선택된 반 레이블 업데이트
+};
+
+// 학교 구조 Firebase 저장
+window.saveSchoolConfig = async function() {
+  if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
+  const g1=parseInt(document.getElementById('sc_grade1').value)||14;
+  const g2=parseInt(document.getElementById('sc_grade2').value)||17;
+  const g3=parseInt(document.getElementById('sc_grade3').value)||17;
+  await set(ref(db,'settings/school'), {grade1:g1, grade2:g2, grade3:g3});
+  schoolConfig={grade1:g1, grade2:g2, grade3:g3};
+  const st=document.getElementById('scStatus');
+  if(st){st.textContent='✅ 저장됨';setTimeout(()=>st.textContent='',3000);}
+};
+
+// 교과 빠른선택
+window.selectSubject = function(name) {
+  document.getElementById('paSubject').value = name;
+  document.querySelectorAll('.subj-btn[data-subj]').forEach(b =>
+    b.classList.toggle('active', b.dataset.subj === name)
+  );
+};
+window.clearSubjBtn = function() {
+  document.querySelectorAll('.subj-btn[data-subj]').forEach(b => b.classList.remove('active'));
+};
+// 학급 전체 선택/해제 (grade=0이면 전체 해제)
+window.selectGrade = function(grade) {
+  document.querySelectorAll('.paClassCheck').forEach(cb => {
+    if(grade === 0) cb.checked = false;
+    else cb.checked = cb.value.startsWith(grade + '-');
+  });
+};
+// 담당교사 datalist 자동완성 — 기존 PA 데이터 기반
+function _fillTeacherList() {
+  const teachers = new Set(Object.values(allPA).map(p=>p.teacher).filter(Boolean));
+  const dl = document.getElementById('paTeacherList');
+  if(dl) dl.innerHTML = [...teachers].sort().map(t=>`<option value="${t}">`).join('');
+}
 
 // ══════════════════════════════════════════════════════
 // Firebase CRUD — 주간업무 (셀 단위 입력)
