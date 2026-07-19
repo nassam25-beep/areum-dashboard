@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.9 / PA v3.2                 ║
-     ║  2026-07-18                                     ║
+     ║  areum dashboard v2.9 / PA v3.3                 ║
+     ║  2026-07-19                                     ║
+     ║  v3.3: 달력 날짜 더블클릭 → 일정/수행평가 탭 모달  ║
      ║  v3.2: 수행평가 교시별 학급 매트릭스 입력          ║
-     ║        groupId 기반 레코드 분리 저장              ║
+     ║        groupId 기반 교시별 레코드 분리 저장        ║
+     ║  v3.1: 48학급 동적 UI, 학교 구조 Firebase 설정   ║
+     ║  v3.0: 수행평가 담임 학급별 뷰, 교과 빠른선택      ║
      ║  v2.9: 월중계획 별도 수행평가 추가 버튼            ║
      ║  v2.8: 월중계획↔수행평가 양방향 연동 등록         ║
      ║  v2.7: 월간뷰 hover 크로스헤어, 팝업 모달화       ║
@@ -19,7 +22,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.9</title>
+<title>areum dashboard v2.9 / PA v3.3</title>
 <style>
 /* ═══════════════════════════════════════════════
    CSS 변수 & 리셋
@@ -256,6 +259,11 @@ textarea{resize:vertical;}
 .modal{background:white;border-radius:14px;padding:22px;width:100%;max-width:460px;
   max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);}
 .modal-ttl{font-size:16px;font-weight:800;margin-bottom:16px;color:var(--primary);}
+/* 날짜셀 더블클릭 탭 스트립 */
+.day-tab-strip{display:flex;border-radius:9px;overflow:hidden;border:1.5px solid var(--border);margin-bottom:14px;}
+.day-tab{flex:1;padding:9px 0;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:.12s;background:var(--gray-light);color:var(--text-muted);}
+.day-tab.dt-ev-active{background:var(--primary);color:#fff;cursor:default;}
+.day-tab.dt-pa-active{background:var(--purple);color:#fff;cursor:default;}
 .form-row{margin-bottom:10px;}
 .form-row label{display:block;font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:4px;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -666,12 +674,14 @@ textarea{resize:vertical;}
         <button class="sbtn" style="background:#7c3aed;color:#fff;" onclick="openAddPAModal()">+ 수행평가</button>
       </div>
     </div>
-    <div class="card-body"><div class="cal-grid" id="calGrid"></div></div>
+    <div class="card-body">
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
   </div>
   <div class="card">
     <div class="card-hdr">
       <div class="card-ttl" id="calSelTitle">날짜를 클릭하세요</div>
-      <div id="calAddBtnGroup" style="display:none;gap:6px;display:none;">
+      <div id="calAddBtnGroup" style="display:none;gap:6px;">
         <button class="sbtn sbtn-p" id="calAddBtn" onclick="openAddEventForDate()">+ 일정 추가</button>
         <button class="sbtn" id="calAddPaBtn" style="background:#7c3aed;color:#fff;" onclick="openAddPAForDate()">+ 수행평가</button>
       </div>
@@ -972,6 +982,11 @@ textarea{resize:vertical;}
 <!-- 월중계획 일정 추가/수정 모달 -->
 <div class="overlay" id="addEventModal">
   <div class="modal">
+    <!-- 날짜셀 더블클릭 시 표시되는 탭 스트립 (일반 추가/수정 시 hidden) -->
+    <div id="evDayTabStrip" style="display:none;" class="day-tab-strip">
+      <button class="day-tab dt-ev-active">📅 일정</button>
+      <button class="day-tab" onclick="switchDayTab('pa')">📝 수행평가</button>
+    </div>
     <div class="modal-ttl" id="evModalTitle">+ 일정 추가</div>
     <input type="hidden" id="evEditId">
     <div class="g2">
@@ -1073,6 +1088,11 @@ textarea{resize:vertical;}
 <!-- 수행평가 추가 모달 -->
 <div class="overlay" id="addPAModal">
   <div class="modal" style="max-width:520px;">
+    <!-- 날짜셀 더블클릭 시 표시되는 탭 스트립 -->
+    <div id="paDayTabStrip" style="display:none;" class="day-tab-strip">
+      <button class="day-tab" onclick="switchDayTab('ev')">📅 일정</button>
+      <button class="day-tab dt-pa-active">📝 수행평가</button>
+    </div>
     <div class="modal-ttl" id="paModalTitle">📝 수행평가 추가</div>
     <input type="hidden" id="paEditId">
     <input type="hidden" id="paEditGroupId">
@@ -1876,7 +1896,7 @@ function renderCalendar() {
       bars += `<span class="cal-bar-more">+${total-MAX_BARS}건 더보기</span>`;
     }
 
-    cells += `<div class="${cls}" onclick="showDay('${ds}')" ondblclick="openAddEventForDate('${ds}')"><div class="date-num">${d}</div>${bars}</div>`;
+    cells += `<div class="${cls}" onclick="showDay('${ds}')" ondblclick="openDayAddModal('${ds}')"><div class="date-num">${d}</div>${bars}</div>`;
   }
   // 다음 달 채우기
   const remain = 42 - firstDay - lastDate;
@@ -2411,10 +2431,35 @@ window.setPASort = function(v){
 };
 
 // ══════════════════════════════════════════════════════
+// 날짜셀 더블클릭 — 탭 통합 입력 (v3.2)
+// ══════════════════════════════════════════════════════
+// 더블클릭 진입점: 일정 탭으로 모달 열고 탭 스트립 표시
+window.openDayAddModal = function(ds) {
+  ds = ds || selectedCalDate || todayStr;
+  openAddEventForDate(ds);          // 일정 모달 열기 (내부에서 탭 스트립 hide)
+  const s=document.getElementById('evDayTabStrip'); if(s) s.style.display='flex';
+};
+// 탭 전환: 'ev' ↔ 'pa'
+window.switchDayTab = function(to) {
+  if(to==='pa'){
+    const ds=document.getElementById('evDate').value||todayStr;
+    closeModal('addEventModal');
+    openAddPAForDate(ds);           // PA 모달 열기 (내부에서 탭 스트립 hide)
+    const s=document.getElementById('paDayTabStrip'); if(s) s.style.display='flex';
+  } else {
+    const ds=document.getElementById('paDate').value||todayStr;
+    closeModal('addPAModal');
+    openAddEventForDate(ds);        // 일정 모달 열기 (내부에서 탭 스트립 hide)
+    const s=document.getElementById('evDayTabStrip'); if(s) s.style.display='flex';
+  }
+};
+
+// ══════════════════════════════════════════════════════
 // Firebase CRUD — 월중계획
 // ══════════════════════════════════════════════════════
 window.openAddEventForDate = function(ds) {
   ds = ds || selectedCalDate || todayStr;
+  const _evs=document.getElementById('evDayTabStrip'); if(_evs) _evs.style.display='none';
   document.getElementById('evEditId').value='';
   document.getElementById('evModalTitle').textContent='+ 일정 추가';
   document.getElementById('evDate').value=ds;
@@ -2427,6 +2472,7 @@ window.openAddEventForDate = function(ds) {
   openModal('addEventModal');
 };
 window.openAddEventModal = function() {
+  const _evs=document.getElementById('evDayTabStrip'); if(_evs) _evs.style.display='none';
   document.getElementById('evEditId').value='';
   document.getElementById('evModalTitle').textContent='+ 일정 추가';
   document.getElementById('evDate').value=todayStr;
@@ -2440,6 +2486,7 @@ window.openAddEventModal = function() {
 };
 window.openEditEventModal = function(id) {
   const ev=allEvents[id]; if(!ev) return;
+  const _evs=document.getElementById('evDayTabStrip'); if(_evs) _evs.style.display='none';
   document.getElementById('evEditId').value=id;
   document.getElementById('evModalTitle').textContent='✏️ 일정 수정';
   document.getElementById('evDate').value=ev.start;
@@ -2489,6 +2536,7 @@ window.deleteEvent = async function() {
 // 월중계획에서 날짜 지정 수행평가 추가
 window.openAddPAForDate = function(ds) {
   ds = ds || selectedCalDate || todayStr;
+  const _pas=document.getElementById('paDayTabStrip'); if(_pas) _pas.style.display='none';
   document.getElementById('paEditId').value='';
   document.getElementById('paEditGroupId').value='';
   document.getElementById('paDate').value=ds;
@@ -2666,6 +2714,7 @@ window.deleteDuty = async function() {
 // Firebase CRUD — 수행평가
 // ══════════════════════════════════════════════════════
 window.openAddPAModal = function() {
+  const _pas=document.getElementById('paDayTabStrip'); if(_pas) _pas.style.display='none';
   document.getElementById('paEditId').value='';
   document.getElementById('paEditGroupId').value='';
   document.getElementById('paDate').value=todayStr;
@@ -2679,6 +2728,7 @@ window.openAddPAModal = function() {
 };
 window.openEditPAModal = function(id) {
   const p=allPA[id]; if(!p) return;
+  const _pas=document.getElementById('paDayTabStrip'); if(_pas) _pas.style.display='none';
   document.getElementById('paEditId').value=id;
   document.getElementById('paDate').value=p.date;
   document.getElementById('paSubject').value=p.subject||'';
