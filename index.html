@@ -1766,7 +1766,7 @@ function renderToday() {
         <div class="duty-av" style="background:${personBg(r.person)}">${personEmoji(r.person)}</div>
         <div>
           <div class="duty-name">${personLabel(r.person)} — ${r.kind}</div>
-          <div class="duty-meta">${r.reason||''} ${r.place?'📍'+r.place:''} ${r.deputy?'대결: '+r.deputy:''}</div>
+          <div class="duty-meta">${r.from?`<span style="background:#ede9fe;color:#6d28d9;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin-right:4px;">🕘 ${r.from}${r.to?'~'+r.to:''}</span>`:''}${r.reason||''} ${r.place?'📍'+r.place:''} ${r.deputy?'대결: '+r.deputy:''}</div>
         </div>
       </div>`).join('')
     : '<div class="empty">복무 없음</div>';
