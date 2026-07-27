@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.9 / PA v3.3                 ║
-     ║  2026-07-19                                     ║
+     ║  areum dashboard v2.9 / PA v3.4                 ║
+     ║  2026-07-27                                     ║
+     ║  v3.4: Google 로그인 인증 추가 (firebase/auth)   ║
      ║  v3.3: 달력 날짜 더블클릭 → 일정/수행평가 탭 모달  ║
      ║  v3.2: 수행평가 교시별 학급 매트릭스 입력          ║
      ║        groupId 기반 교시별 레코드 분리 저장        ║
@@ -591,9 +592,56 @@ textarea{resize:vertical;}
 .school-result-item span{font-size:11px;color:var(--text-muted);}
 .neis-search-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
 .neis-search-row input{flex:1;}
+
+/* ── 구글 로그인 화면 ── */
+#loginScreen{
+  position:fixed;inset:0;
+  background:linear-gradient(135deg,#1a56db 0%,#6c2bd9 100%);
+  display:flex;align-items:center;justify-content:center;z-index:9999;
+}
+.login-box{
+  background:white;border-radius:20px;padding:48px 40px;text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,.35);max-width:380px;width:90%;
+}
+.login-logo{font-size:56px;margin-bottom:12px;}
+.login-title{font-size:22px;font-weight:900;color:var(--text);margin-bottom:4px;}
+.login-sub{font-size:13px;color:var(--text-muted);margin-bottom:32px;line-height:1.6;}
+.google-btn{
+  display:flex;align-items:center;gap:12px;justify-content:center;
+  background:white;border:2px solid var(--border);border-radius:12px;
+  padding:14px 24px;font-size:14px;font-weight:700;color:var(--text);
+  width:100%;transition:.15s;cursor:pointer;
+}
+.google-btn:hover{background:#f0f4ff;border-color:var(--primary);color:var(--primary);}
+#loginLoading{display:none;font-size:13px;color:var(--text-muted);margin-top:14px;}
+.login-notice{font-size:11px;color:#9ca3af;margin-top:14px;line-height:1.6;}
+/* 헤더 유저 정보 */
+#userInfo{align-items:center;gap:8px;}
+#userPhoto{border-radius:50%;border:2px solid rgba(255,255,255,.5);width:28px;height:28px;object-fit:cover;}
+#userName{font-size:11px;font-weight:700;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 </style>
 </head>
 <body>
+
+<!-- ═══════════ 구글 로그인 화면 ═══════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">🏫</div>
+    <div class="login-title">아름중학교</div>
+    <div class="login-sub">종합 대시보드에 오신 것을 환영합니다.<br>Google 계정으로 로그인하세요.</div>
+    <button class="google-btn" onclick="googleSignIn()">
+      <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
+        <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
+        <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/>
+        <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
+      </svg>
+      Google 계정으로 로그인
+    </button>
+    <div id="loginLoading">🔄 로그인 중…</div>
+    <div class="login-notice">로그인 정보는 외부에 전송되지 않으며,<br>Firebase 접근 권한 확인에만 사용됩니다.</div>
+  </div>
+</div>
 
 <!-- ═══════════ 헤더 ═══════════ -->
 <div class="header">
@@ -604,6 +652,11 @@ textarea{resize:vertical;}
   <span style="font-size:10px;color:var(--text-muted);background:#f1f5f9;border-radius:10px;padding:2px 8px;font-weight:700;" id="appVersion">v1.5</span>
   <button class="hbtn" onclick="openStartPageModal()">🏠 시작페이지 설정</button>
   <button class="hbtn" onclick="openNameModal()">⚙ 학교명</button>
+  <div id="userInfo" style="display:none;">
+    <img id="userPhoto" src="" alt="">
+    <span id="userName" style="color:white;"></span>
+    <button class="hbtn" onclick="googleSignOut()">로그아웃</button>
+  </div>
 </div>
 
 <!-- ═══════════ 탭 ═══════════ -->
@@ -1459,12 +1512,18 @@ import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12
 import {
   getDatabase, ref, set, push, remove, onValue, off
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 // ══════════════════════════════════════════════════════
 // 전역 상태
 // ══════════════════════════════════════════════════════
 let db = null;
 let fbApp = null;
+let auth = null;
+let currentUser = null;
+let _listenersStarted = false; // 중복 리스너 방지
 let listeners = {}; // Firebase listeners 참조 저장 (cleanup용)
 
 let allEvents  = {};  // {id: eventObj}
@@ -1506,8 +1565,8 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v3.1';
-const APP_DATE    = '2026-07-09';
+const APP_VERSION = 'v3.4';
+const APP_DATE    = '2026-07-27';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
   if(vEl) vEl.textContent = APP_VERSION;
@@ -1545,8 +1604,38 @@ function initFirebase(config) {
       fbApp = initializeApp(config);
     }
     db = getDatabase(fbApp);
-    updateSyncBadge('연결됨', true);
-    startListeners();
+    auth = getAuth(fbApp);
+    updateSyncBadge('로그인 필요…', false);
+
+    // 인증 상태 감지 — 로그인 후 리스너/렌더 시작
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      if (user) {
+        // 로그인 성공 → 대시보드 표시
+        const ls = document.getElementById('loginScreen');
+        if (ls) ls.style.display = 'none';
+        const ui = document.getElementById('userInfo');
+        if (ui) ui.style.display = 'flex';
+        const ph = document.getElementById('userPhoto');
+        if (ph && user.photoURL) ph.src = user.photoURL;
+        const pn = document.getElementById('userName');
+        if (pn) pn.textContent = user.displayName || user.email;
+        updateSyncBadge('연결됨', true);
+        if (!_listenersStarted) {
+          _listenersStarted = true;
+          startListeners();
+        }
+        renderTab(activeTab);
+      } else {
+        // 로그아웃 → 로그인 화면 표시
+        _listenersStarted = false;
+        const ls = document.getElementById('loginScreen');
+        if (ls) ls.style.display = 'flex';
+        const ui = document.getElementById('userInfo');
+        if (ui) ui.style.display = 'none';
+        updateSyncBadge('로그인 필요', false);
+      }
+    });
     return true;
   } catch(err) {
     console.error('Firebase 초기화 실패:', err);
@@ -1554,6 +1643,36 @@ function initFirebase(config) {
     return false;
   }
 }
+
+// ══════════════════════════════════════════════════════
+// 구글 로그인 / 로그아웃
+// ══════════════════════════════════════════════════════
+window.googleSignIn = async function() {
+  if (!auth) { alert('Firebase가 초기화되지 않았습니다.'); return; }
+  const loading = document.getElementById('loginLoading');
+  if (loading) loading.style.display = 'block';
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+    // onAuthStateChanged가 자동으로 대시보드 전환 처리
+  } catch(err) {
+    console.error('로그인 실패:', err);
+    if (err.code !== 'auth/popup-closed-by-user') {
+      alert('로그인에 실패했습니다. 다시 시도해주세요.');
+    }
+    if (loading) loading.style.display = 'none';
+  }
+};
+
+window.googleSignOut = async function() {
+  if (!auth) return;
+  if (!confirm('로그아웃하시겠습니까?')) return;
+  try {
+    await signOut(auth);
+  } catch(err) {
+    console.error('로그아웃 실패:', err);
+  }
+};
 
 function updateSyncBadge(msg, ok) {
   const el = document.getElementById('syncBadge');
@@ -3538,8 +3657,7 @@ window.copyStartPageUrl = async function() {
   // Firebase 자동 연결 (localStorage 우선, 없으면 내장 설정값 사용)
   const cfg = loadFirebaseConfig() || DEFAULT_FB_CONFIG;
   initFirebase(cfg);
-
-  renderTab('today');
+  // renderTab은 onAuthStateChanged(로그인 확인) 후 자동 호출됨
 })();
 </script>
 </body>
