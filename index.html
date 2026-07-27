@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.9 / PA v3.4                 ║
+     ║  areum dashboard v2.9 / PA v3.5                 ║
      ║  2026-07-27                                     ║
+     ║  v3.5: 주간업무 균등 열너비 + 말줄임 + 모바일 최적화║
      ║  v3.4: Google 로그인 인증 추가 (firebase/auth)   ║
      ║  v3.3: 달력 날짜 더블클릭 → 일정/수행평가 탭 모달  ║
      ║  v3.2: 수행평가 교시별 학급 매트릭스 입력          ║
@@ -144,15 +145,15 @@ textarea{resize:vertical;}
 .ev-cat{font-size:11px;color:var(--text-muted);margin-top:2px;}
 
 /* ── 주간업무 테이블 ── */
-.wk-table{width:100%;border-collapse:collapse;font-size:12px;}
+.wk-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
 .wk-table th{background:#1e40af;color:white;padding:8px;text-align:center;font-size:12px;}
-.wk-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top;}
+.wk-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
 .wk-table tr:hover td{background:#f0f9ff;}
-.wk-dept{font-weight:700;font-size:12px;min-width:80px;}
+.wk-dept{font-weight:700;font-size:12px;width:10%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .wk-task{color:#374151;}
 .wk-done{text-decoration:line-through;opacity:.5;}
 .wk-chk{color:var(--green);font-size:11px;}
-.wk-cell{cursor:pointer;position:relative;}
+.wk-cell{cursor:pointer;position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0;}
 .wk-cell:hover{background:#eff6ff !important;}
 .wk-cell:hover::after{content:'✏️';position:absolute;top:3px;right:4px;font-size:10px;opacity:.5;}
 .wk-cell-filled{background:#f0fdf4;}
@@ -522,8 +523,16 @@ textarea{resize:vertical;}
   .form-actions{flex-wrap:wrap;}
   .form-actions .btn{flex:1;text-align:center;}
 
-  /* 주간업무 */
-  .wk-table th,.wk-table td{padding:5px 6px;font-size:11px;}
+  /* 주간업무 — 모바일: 가로 스크롤 + 부서열 고정 */
+  .wk-table th,.wk-table td{padding:5px 4px;font-size:10px;}
+  #page-weekly .card-body > div[style*="overflow-x"]{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .wk-table{min-width:560px;} /* 스크롤 가능하도록 최소 너비 보장 */
+  .wk-dept{position:sticky;left:0;background:white;z-index:1;box-shadow:2px 0 4px rgba(0,0,0,.06);}
+  .wk-table tr:hover .wk-dept{background:#f0f9ff;}
+  .wk-table th:first-child{position:sticky;left:0;z-index:2;background:#1e40af;}
+  /* 헤더 버튼 줄바꿈 방지 */
+  .wk-nav{gap:6px;}
+  .wk-nav .sbtn{font-size:11px;padding:5px 8px;}
 
   /* 사용법 */
   .help-hero{padding:18px 16px;}
@@ -1565,7 +1574,7 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v3.4';
+const APP_VERSION = 'v3.5';
 const APP_DATE    = '2026-07-27';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
@@ -2159,12 +2168,12 @@ function renderWeekly() {
   const sun = new Date(viewWeekKey + 'T00:00:00');
   const head = document.getElementById('wkTableHead');
   if(head) {
-    // 월(+1)~토(+6)의 날짜 계산
+    // 월(+1)~토(+6)의 날짜 계산 — 균등 너비(%)
     const dateCols = DAYS.map((d,i) => {
       const dt = new Date(sun); dt.setDate(sun.getDate() + i + 1);
-      return `<th style="min-width:100px;">${d}<br><span style="font-size:10px;font-weight:400;">${dt.getMonth()+1}/${dt.getDate()}</span></th>`;
+      return `<th style="width:12%;">${d}<br><span style="font-size:10px;font-weight:400;">${dt.getMonth()+1}/${dt.getDate()}</span></th>`;
     });
-    head.innerHTML = `<th style="min-width:90px;">부서</th>${dateCols.join('')}<th style="min-width:80px;">비고</th>`;
+    head.innerHTML = `<th style="width:10%;">부서</th>${dateCols.join('')}<th style="width:18%;">비고</th>`;
   }
 
   const data = allWeeklyData[viewWeekKey] || {};
@@ -2175,16 +2184,19 @@ function renderWeekly() {
       const tds = DAYS.map(d => {
         const val = e[d] || '';
         const period = e['period_'+d] || '';
-        const periodStr = period ? `<span style="font-size:10px;color:var(--purple);font-weight:700;display:block;margin-bottom:2px;">${period}교시</span>` : '';
+        // 단일 라인으로 표시 (ellipsis를 위해)
+        const displayText = (period ? `[${period}교시] ` : '') + val;
         const cls = val ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
-        return `<td class="${cls}" ondblclick="openWkCellModal('${dept}','${d}')">${periodStr}${val}</td>`;
+        const safeTip = displayText.replace(/"/g,'&quot;');
+        return `<td class="${cls}" ondblclick="openWkCellModal('${dept}','${d}')" title="${safeTip}">${displayText}</td>`;
       }).join('');
       const memoCls = e.비고 ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
+      const memoTip = (e.비고||'').replace(/"/g,'&quot;');
       return `<tr>
-        <td class="wk-dept" style="color:${deptColor(dept)}">${dept}</td>
+        <td class="wk-dept" style="color:${deptColor(dept)}" title="${dept}">${dept}</td>
         ${tds}
         <td class="${memoCls}" style="font-size:11px;color:var(--text-muted);"
-            ondblclick="openWkCellModal('${dept}','비고')">${e.비고||''}</td>
+            ondblclick="openWkCellModal('${dept}','비고')" title="${memoTip}">${e.비고||''}</td>
       </tr>`;
     }).join('');
   }
