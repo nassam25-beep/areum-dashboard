@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.9 / PA v3.5                 ║
+     ║  areum dashboard v2.9 / PA v3.7                 ║
      ║  2026-07-27                                     ║
+     ║  v3.7: Excel 주차별 블록·가로방향·수행평가 제외      ║
      ║  v3.6: 주간업무 Excel 다운로드 + 관리자 복무 행    ║
      ║        월중계획 담당부서 콤보박스                  ║
      ║  v3.5: 주간업무 균등 열너비 + 말줄임 + 모바일 최적화║
@@ -26,7 +27,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.9 / PA v3.5</title>
+<title>areum dashboard v2.9 / PA v3.7</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════
@@ -1605,7 +1606,7 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v3.6';
+const APP_VERSION = 'v3.7';
 const APP_DATE    = '2026-07-27';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
