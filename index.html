@@ -2290,90 +2290,135 @@ window.openXlsxModal = function() {
   openModal('xlsxModal');
 };
 
-// Excel 다운로드
+// Excel 다운로드 (주차별 블록 구성 / 가로 방향)
 window.downloadWeeklyExcel = function() {
   const fromDate = document.getElementById('xlsxFrom').value;
   const toDate   = document.getElementById('xlsxTo').value;
   if(!fromDate || !toDate || fromDate > toDate) { alert('기간을 올바르게 선택하세요.'); return; }
   if(typeof XLSX === 'undefined') { alert('Excel 라이브러리가 아직 로드되지 않았습니다. 잠시 후 다시 시도하세요.'); return; }
 
-  const DOW_KR = ['일','월','화','수','목','금','토'];
+  const DOW_KR  = ['일','월','화','수','목','금','토'];
+  const MGRS    = ['교장','1캠교감','2캠교감','교감'];
+  const typeLabel = {student:'학생', staff:'교직원', parent:'학부모', etc:'기타'};
 
-  // 기간 내 날짜 목록
-  const dates = [];
-  let cur = new Date(fromDate + 'T00:00:00');
-  const end = new Date(toDate + 'T00:00:00');
-  while(cur <= end) {
-    dates.push(`${cur.getFullYear()}-${S2(cur.getMonth()+1)}-${S2(cur.getDate())}`);
-    cur.setDate(cur.getDate()+1);
+  // 기간 내 주차 키 목록 (일요일 기준)
+  const weekKeys = [];
+  const startSun = new Date(fromDate + 'T00:00:00');
+  startSun.setDate(startSun.getDate() - startSun.getDay());
+  const endD = new Date(toDate + 'T00:00:00');
+  const cur = new Date(startSun);
+  while(cur <= endD) {
+    weekKeys.push(`${cur.getFullYear()}-${S2(cur.getMonth()+1)}-${S2(cur.getDate())}`);
+    cur.setDate(cur.getDate()+7);
   }
 
-  // ── Sheet 1: 주간부서별업무 + 관리자복무 ──
-  const colHeaders = ['부서/성명', ...dates.map(ds => {
-    const dt = new Date(ds+'T00:00:00');
-    return `${dt.getMonth()+1}/${dt.getDate()}(${DOW_KR[dt.getDay()]})`;
-  }), '비고'];
+  const NCOLS = 9; // 부서(1) + 월~토(6) + 비고(1) + [월중계획 포함열(1)]
+  const aoa    = [];
+  const merges = [];
+  const rowMeta = []; // {height, bold} per row
 
-  const s1rows = [colHeaders];
-
-  // 부서 행
-  ALL_DEPTS.forEach(dept => {
-    const row = [dept];
-    dates.forEach(ds => {
-      const wk = getWeekKeyFromDate(ds);
-      const e = (allWeeklyData[wk]||{})[dept]||{};
-      const dow = DOW_KR[new Date(ds+'T00:00:00').getDay()];
-      const task = e[dow]||'';
-      const period = e['period_'+dow]||'';
-      // 월중계획에서 이 부서 + 이 날짜에 해당하는 행사
-      const evTitles = Object.values(allEvents)
-        .filter(ev => (ev.dept===dept) && ev.start<=ds && (ev.end||ev.start)>=ds)
-        .map(ev => '📅'+ev.title).join(' ');
-      const parts = [];
-      if(task) parts.push((period?`[${period}교시] `:'')+task);
-      if(evTitles) parts.push(evTitles);
-      row.push(parts.join(' | '));
+  weekKeys.forEach((wk, wkIdx) => {
+    const sun = new Date(wk + 'T00:00:00');
+    // 월~토 날짜 문자열
+    const weekDates = [1,2,3,4,5,6].map(i => {
+      const dt = new Date(sun); dt.setDate(sun.getDate()+i);
+      return `${dt.getFullYear()}-${S2(dt.getMonth()+1)}-${S2(dt.getDate())}`;
     });
-    row.push((allWeeklyData[getWeekKeyFromDate(dates[0])]||{})[dept]?.비고||'');
-    s1rows.push(row);
-  });
+    const mon = new Date(sun); mon.setDate(sun.getDate()+1);
+    const sat = new Date(sun); sat.setDate(sun.getDate()+6);
+    const weekNum = Math.ceil(mon.getDate()/7);
 
-  // 구분행
-  s1rows.push(['── 관리자 복무 ──', ...dates.map(()=>''), '']);
+    // ── 주차 라벨 (병합) ──
+    const lblRow = aoa.length;
+    aoa.push([`${mon.getFullYear()}년 ${mon.getMonth()+1}월 ${weekNum}주  (${mon.getMonth()+1}/${mon.getDate()} ~ ${sat.getMonth()+1}/${sat.getDate()})`, ...Array(NCOLS-1).fill('')]);
+    merges.push({s:{r:lblRow,c:0}, e:{r:lblRow,c:NCOLS-1}});
+    rowMeta.push({hpt:18, bold:true});
 
-  // 관리자 행
-  ['교장','1캠교감','2캠교감','교감'].forEach(mgr => {
-    const row = [personLabel(mgr)];
-    dates.forEach(ds => {
-      const duties = dutiesOnDate(ds).filter(r=>r.person===mgr);
-      row.push(duties.map(r=>r.kind+(r.from?` ${r.from}${r.to?'~'+r.to:''}`:'')+(r.place?' '+r.place:'')).join(' / '));
+    // ── 헤더 행 ──
+    const hdr = ['부서'];
+    weekDates.forEach(ds => {
+      const dt = new Date(ds+'T00:00:00');
+      hdr.push(`${dt.getMonth()+1}/${dt.getDate()}(${DOW_KR[dt.getDay()]})`);
     });
-    row.push('');
-    s1rows.push(row);
+    hdr.push('비고');
+    aoa.push(hdr);
+    rowMeta.push({hpt:16, bold:true});
+
+    // ── 부서 행 ──
+    const data = allWeeklyData[wk] || {};
+    ALL_DEPTS.forEach(dept => {
+      const e = data[dept] || {};
+      const row = [dept];
+      weekDates.forEach(ds => {
+        const inRange = ds >= fromDate && ds <= toDate;
+        if(!inRange) { row.push(''); return; }
+        const dow = DOW_KR[new Date(ds+'T00:00:00').getDay()];
+        const task   = e[dow] || '';
+        const period = e['period_'+dow] || '';
+        const evTitles = Object.values(allEvents)
+          .filter(ev => ev.dept===dept && ev.start<=ds && (ev.end||ev.start)>=ds && !(ev.title||'').includes('수행평가'))
+          .map(ev => '▶'+ev.title).join(' ');
+        const parts = [];
+        if(task) parts.push((period?`[${period}교시] `:'')+task);
+        if(evTitles) parts.push(evTitles);
+        row.push(parts.join(' | '));
+      });
+      row.push(e.비고||'');
+      aoa.push(row);
+      rowMeta.push({hpt:15});
+    });
+
+    // ── 관리자 구분행 (병합) ──
+    const sepRow = aoa.length;
+    aoa.push(['▪ 관리자 복무', ...Array(NCOLS-1).fill('')]);
+    merges.push({s:{r:sepRow,c:0}, e:{r:sepRow,c:NCOLS-1}});
+    rowMeta.push({hpt:14, bold:true});
+
+    // ── 관리자 행 ──
+    MGRS.forEach(mgr => {
+      const row = [personLabel(mgr)];
+      weekDates.forEach(ds => {
+        const inRange = ds >= fromDate && ds <= toDate;
+        if(!inRange) { row.push(''); return; }
+        const duties = dutiesOnDate(ds).filter(r=>r.person===mgr);
+        row.push(duties.map(r=>r.kind+(r.from?` ${r.from}${r.to?'~'+r.to:''}`:'')+(r.place?' '+r.place:'')).join(' / '));
+      });
+      row.push('');
+      aoa.push(row);
+      rowMeta.push({hpt:14});
+    });
+
+    // ── 주차 사이 빈 행 ──
+    if(wkIdx < weekKeys.length - 1) {
+      aoa.push(Array(NCOLS).fill(''));
+      rowMeta.push({hpt:8});
+    }
   });
 
   // ── Sheet 2: 월중계획 ──
   const s2rows = [['날짜','종료일','요일','행사명','구분','학년','담당부서','장소','메모']];
-  const evInRange = Object.values(allEvents)
-    .filter(ev => (ev.end||ev.start) >= fromDate && ev.start <= toDate)
-    .sort((a,b) => a.start.localeCompare(b.start));
-  const typeLabel = {student:'학생', staff:'교직원', parent:'학부모', etc:'기타'};
-  evInRange.forEach(ev => {
-    const dt = new Date(ev.start+'T00:00:00');
-    s2rows.push([
-      ev.start, ev.end||ev.start, DOW_KR[dt.getDay()],
-      ev.title, typeLabel[ev.type]||ev.type||'',
-      ev.grade||'', ev.dept||'', ev.place||'', ev.memo||''
-    ]);
-  });
+  Object.values(allEvents)
+    .filter(ev => (ev.end||ev.start)>=fromDate && ev.start<=toDate && !(ev.title||'').includes('수행평가'))
+    .sort((a,b)=>a.start.localeCompare(b.start))
+    .forEach(ev => {
+      const dt = new Date(ev.start+'T00:00:00');
+      s2rows.push([ev.start, ev.end||ev.start, DOW_KR[dt.getDay()],
+        ev.title, typeLabel[ev.type]||'', ev.grade||'', ev.dept||'', ev.place||'', ev.memo||'']);
+    });
 
-  // 워크북 생성
-  const wb = XLSX.utils.book_new();
-  const ws1 = XLSX.utils.aoa_to_sheet(s1rows);
+  // ── 워크북 생성 ──
+  const wb  = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet(aoa);
+  ws1['!merges']    = merges;
+  ws1['!cols']      = [{wch:14},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:18}];
+  ws1['!rows']      = rowMeta.map(m=>({hpt:m.hpt||14}));
+  ws1['!pageSetup'] = {orientation:'landscape', fitToWidth:1, fitToHeight:0, fitToPage:true, scale:85};
+  ws1['!printOptions'] = {gridLines:true};
+
   const ws2 = XLSX.utils.aoa_to_sheet(s2rows);
-  // 열 너비 자동
-  ws1['!cols'] = colHeaders.map((_,i) => ({wch: i===0?14:12}));
-  ws2['!cols'] = [10,10,6,20,8,10,12,12,20].map(w=>({wch:w}));
+  ws2['!cols']      = [10,10,5,24,8,10,12,12,20].map(w=>({wch:w}));
+  ws2['!pageSetup'] = {orientation:'landscape', fitToWidth:1};
+
   XLSX.utils.book_append_sheet(wb, ws1, '주간부서별업무');
   XLSX.utils.book_append_sheet(wb, ws2, '월중계획');
   XLSX.writeFile(wb, `아름중_업무계획_${fromDate}~${toDate}.xlsx`);
