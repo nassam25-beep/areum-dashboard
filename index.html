@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.9 / PA v3.7                 ║
+     ║  areum dashboard v2.9 / PA v3.8                 ║
      ║  2026-07-27                                     ║
      ║  v3.7: Excel 주차별 블록·가로방향·수행평가 제외      ║
      ║  v3.6: 주간업무 Excel 다운로드 + 관리자 복무 행    ║
@@ -27,7 +27,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.9 / PA v3.7</title>
+<title>areum dashboard v2.9 / PA v3.8</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════
@@ -921,6 +921,35 @@ textarea{resize:vertical;}
     <span id="scStatus" style="margin-left:10px;font-size:12px;color:var(--green);"></span>
   </div>
 
+  <!-- 부서 설정 -->
+  <div class="setup-box" style="margin-top:14px;">
+    <h3>🏢 부서 설정</h3>
+    <p style="font-size:12px;color:#1e3a5f;margin-bottom:12px;">
+      주간업무·월중계획·Excel에 사용할 부서 목록입니다. 한 줄에 부서명 하나씩 입력하세요.<br>
+      저장하면 Firebase에 반영되어 모든 기기에서 즉시 적용됩니다.
+    </p>
+    <textarea id="deptList" rows="14"
+      style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);
+      border-radius:8px;padding:10px;font-size:13px;font-family:inherit;
+      resize:vertical;line-height:1.8;">1학년부
+2학년부
+3학년부
+교무부
+교육과정부
+연구평가부
+학생안전자치부
+방과후학교부
+글로벌인성복지부
+스마트정보부
+진로진학부
+예술체육건강부
+행정실</textarea>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:12px;">
+      <button class="btn btn-p" onclick="saveDeptConfig()">💾 저장</button>
+      <span id="deptStatus" style="font-size:12px;color:var(--green);"></span>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-hdr"><div class="card-ttl">📖 Firebase 설정 방법</div></div>
     <div class="card-body" style="font-size:13px;line-height:1.8;color:#374151;">
@@ -1606,7 +1635,7 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v3.7';
+const APP_VERSION = 'v3.8';
 const APP_DATE    = '2026-07-27';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
@@ -1776,6 +1805,18 @@ function startListeners() {
         if(el) el.value = schoolConfig[k];
       });
     }
+  });
+
+  // 부서 목록 설정
+  const deptRef = ref(db, 'settings/depts');
+  onValue(deptRef, snap => {
+    const val = snap.val();
+    if(val && Array.isArray(val) && val.length > 0) {
+      ALL_DEPTS = val;
+    }
+    // 설정 탭 textarea 반영
+    const el = document.getElementById('deptList');
+    if(el) el.value = ALL_DEPTS.join('\n');
   });
 
   updateSyncBadge('실시간 동기화 중', true);
@@ -2142,7 +2183,7 @@ let selectedPAClass = ''; // 선택된 학급 예: '2-6'
 
 // 주간업무
 // ══════════════════════════════════════════════════════
-const ALL_DEPTS = ['1학년부','2학년부','3학년부','교무부','교육과정부','연구평가부',
+let ALL_DEPTS = ['1학년부','2학년부','3학년부','교무부','교육과정부','연구평가부',
   '학생안전자치부','방과후학교부','글로벌인성복지부','스마트정보부','진로진학부','예술체육건강부','행정실'];
 
 // 날짜 객체 → 'YYYY-MM-DD' (로컬 시간 기준, 타임존 오류 방지)
@@ -3352,6 +3393,20 @@ window.saveSchoolConfig = async function() {
   schoolConfig={grade1:g1, grade2:g2, grade3:g3};
   const st=document.getElementById('scStatus');
   if(st){st.textContent='✅ 저장됨';setTimeout(()=>st.textContent='',3000);}
+};
+
+window.saveDeptConfig = async function() {
+  if(!db){alert('Firebase가 연결되지 않았습니다.');return;}
+  const el = document.getElementById('deptList');
+  if(!el) return;
+  const depts = el.value.split('\n').map(s=>s.trim()).filter(s=>s.length>0);
+  if(depts.length === 0){alert('부서명을 최소 1개 입력하세요.');return;}
+  await set(ref(db,'settings/depts'), depts);
+  ALL_DEPTS = depts;
+  const st = document.getElementById('deptStatus');
+  if(st){st.textContent='✅ 저장됨 ('+depts.length+'개)';setTimeout(()=>st.textContent='',3000);}
+  // 주간업무·월중계획 탭 반영
+  if(activeTab==='weekly'||activeTab==='events') renderTab(activeTab);
 };
 
 // 교과 빠른선택
