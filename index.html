@@ -2,6 +2,8 @@
 <!-- ╔══════════════════════════════════════════════════╗
      ║  areum dashboard v2.9 / PA v3.5                 ║
      ║  2026-07-27                                     ║
+     ║  v3.6: 주간업무 Excel 다운로드 + 관리자 복무 행    ║
+     ║        월중계획 담당부서 콤보박스                  ║
      ║  v3.5: 주간업무 균등 열너비 + 말줄임 + 모바일 최적화║
      ║  v3.4: Google 로그인 인증 추가 (firebase/auth)   ║
      ║  v3.3: 달력 날짜 더블클릭 → 일정/수행평가 탭 모달  ║
@@ -24,7 +26,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.9 / PA v3.3</title>
+<title>areum dashboard v2.9 / PA v3.5</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════
    CSS 변수 & 리셋
@@ -758,6 +761,7 @@ textarea{resize:vertical;}
     <div class="card-hdr">
       <div class="card-ttl">📋 주간 부서별 업무</div>
       <span style="font-size:11px;color:var(--text-muted);">셀 더블클릭으로 입력</span>
+      <button class="sbtn" style="background:#059669;color:white;font-size:11px;padding:5px 12px;" onclick="openXlsxModal()">📥 Excel 다운로드</button>
     </div>
     <div class="card-body">
       <!-- 주 내비게이션 -->
@@ -1088,7 +1092,16 @@ textarea{resize:vertical;}
       </div>
     </div>
     <div class="g2">
-      <div class="form-row"><label>담당부서</label><input id="evDept" placeholder="교무부"/></div>
+      <div class="form-row"><label>담당부서</label>
+        <select id="evDept">
+          <option value="">미지정</option>
+          <option>1학년부</option><option>2학년부</option><option>3학년부</option>
+          <option>교무부</option><option>교육과정부</option><option>연구평가부</option>
+          <option>학생안전자치부</option><option>방과후학교부</option><option>글로벌인성복지부</option>
+          <option>스마트정보부</option><option>진로진학부</option><option>예술체육건강부</option>
+          <option>행정실</option><option>관리자</option>
+        </select>
+      </div>
       <div class="form-row"><label>장소</label><input id="evPlace" placeholder="강당"/></div>
     </div>
     <div class="form-row"><label>메모</label><textarea id="evMemo" rows="2"></textarea></div>
@@ -1197,6 +1210,24 @@ textarea{resize:vertical;}
       <button class="btn btn-r" id="paDeleteBtn" style="display:none" onclick="deletePA()">삭제</button>
       <button class="btn btn-g" onclick="closeModal('addPAModal')">취소</button>
       <button class="btn btn-p" onclick="savePA()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Excel 다운로드 기간 선택 모달 -->
+<div class="overlay" id="xlsxModal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-ttl">📥 Excel 다운로드</div>
+    <div class="g2">
+      <div class="form-row"><label>시작일 *</label><input type="date" id="xlsxFrom"/></div>
+      <div class="form-row"><label>종료일 *</label><input type="date" id="xlsxTo"/></div>
+    </div>
+    <p style="font-size:11px;color:var(--text-muted);margin:4px 0 12px;">
+      주간부서별업무 + 관리자복무 + 월중계획이 시트별로 저장됩니다.
+    </p>
+    <div class="form-actions">
+      <button class="btn btn-g" onclick="closeModal('xlsxModal')">취소</button>
+      <button class="btn" style="background:#059669;color:white;" onclick="downloadWeeklyExcel()">다운로드</button>
     </div>
   </div>
 </div>
@@ -1574,7 +1605,7 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v3.5';
+const APP_VERSION = 'v3.6';
 const APP_DATE    = '2026-07-27';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
@@ -2179,15 +2210,21 @@ function renderWeekly() {
     head.innerHTML = `<th style="width:10%;">부서</th>${dateCols.join('')}<th style="width:18%;">비고</th>`;
   }
 
+  // 이번 주 월~토 실제 날짜 계산
+  const weekDates = DAYS.map((d,i) => {
+    const dt = new Date(sun); dt.setDate(sun.getDate() + i + 1);
+    return `${dt.getFullYear()}-${S2(dt.getMonth()+1)}-${S2(dt.getDate())}`;
+  });
+
   const data = allWeeklyData[viewWeekKey] || {};
   const tbody = document.getElementById('wkTableBody');
   if(tbody) {
-    tbody.innerHTML = ALL_DEPTS.map(dept => {
+    // 부서 행
+    const deptRows = ALL_DEPTS.map(dept => {
       const e = data[dept] || {};
       const tds = DAYS.map(d => {
         const val = e[d] || '';
         const period = e['period_'+d] || '';
-        // 단일 라인으로 표시 (ellipsis를 위해)
         const displayText = (period ? `[${period}교시] ` : '') + val;
         const cls = val ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
         const safeTip = displayText.replace(/"/g,'&quot;');
@@ -2202,8 +2239,146 @@ function renderWeekly() {
             ondblclick="openWkCellModal('${dept}','비고')" title="${memoTip}">${e.비고||''}</td>
       </tr>`;
     }).join('');
+
+    // 관리자 복무 행 (구분선 + 교장/교감)
+    const MGRS = ['교장','1캠교감','2캠교감','교감'];
+    const mgrRows = MGRS.map(mgr => {
+      const tds = weekDates.map(ds => {
+        const duties = dutiesOnDate(ds).filter(r => r.person === mgr);
+        const text = duties.map(r => r.kind + (r.from ? ` ${r.from}${r.to?'~'+r.to:''}` : '')).join(' / ');
+        const cls = text ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
+        const safeTip = text.replace(/"/g,'&quot;');
+        return `<td class="${cls}" style="color:var(--purple);font-size:11px;" title="${safeTip}">${text}</td>`;
+      }).join('');
+      return `<tr>
+        <td class="wk-dept" style="color:var(--purple);" title="${personLabel(mgr)}">${personLabel(mgr)}</td>
+        ${tds}
+        <td class="wk-task wk-cell" style="font-size:11px;color:var(--text-muted);"></td>
+      </tr>`;
+    }).join('');
+
+    const separatorRow = `<tr><td colspan="9" style="padding:0;height:3px;background:linear-gradient(90deg,var(--purple-light),transparent);"></td></tr>`;
+
+    tbody.innerHTML = deptRows + separatorRow + mgrRows;
   }
 }
+
+// 특정 날짜의 복무 기록 반환
+function dutiesOnDate(ds) {
+  return dutyArray().filter(r => {
+    if(r.dateFrom && r.dateTo) return ds >= r.dateFrom && ds <= r.dateTo;
+    return r.date === ds;
+  });
+}
+
+// 날짜 문자열 → 해당 주 일요일 키
+function getWeekKeyFromDate(ds) {
+  const d = new Date(ds + 'T00:00:00');
+  d.setDate(d.getDate() - d.getDay());
+  return `${d.getFullYear()}-${S2(d.getMonth()+1)}-${S2(d.getDate())}`;
+}
+
+// Excel 다운로드 모달 열기
+window.openXlsxModal = function() {
+  // 현재 주 기본값
+  const sun = new Date(viewWeekKey || getDefaultWeekKey() + 'T00:00:00');
+  const mon = new Date(sun); mon.setDate(sun.getDate()+1);
+  const sat = new Date(sun); sat.setDate(sun.getDate()+6);
+  const fmt = d => `${d.getFullYear()}-${S2(d.getMonth()+1)}-${S2(d.getDate())}`;
+  document.getElementById('xlsxFrom').value = fmt(mon);
+  document.getElementById('xlsxTo').value = fmt(sat);
+  openModal('xlsxModal');
+};
+
+// Excel 다운로드
+window.downloadWeeklyExcel = function() {
+  const fromDate = document.getElementById('xlsxFrom').value;
+  const toDate   = document.getElementById('xlsxTo').value;
+  if(!fromDate || !toDate || fromDate > toDate) { alert('기간을 올바르게 선택하세요.'); return; }
+  if(typeof XLSX === 'undefined') { alert('Excel 라이브러리가 아직 로드되지 않았습니다. 잠시 후 다시 시도하세요.'); return; }
+
+  const DOW_KR = ['일','월','화','수','목','금','토'];
+
+  // 기간 내 날짜 목록
+  const dates = [];
+  let cur = new Date(fromDate + 'T00:00:00');
+  const end = new Date(toDate + 'T00:00:00');
+  while(cur <= end) {
+    dates.push(`${cur.getFullYear()}-${S2(cur.getMonth()+1)}-${S2(cur.getDate())}`);
+    cur.setDate(cur.getDate()+1);
+  }
+
+  // ── Sheet 1: 주간부서별업무 + 관리자복무 ──
+  const colHeaders = ['부서/성명', ...dates.map(ds => {
+    const dt = new Date(ds+'T00:00:00');
+    return `${dt.getMonth()+1}/${dt.getDate()}(${DOW_KR[dt.getDay()]})`;
+  }), '비고'];
+
+  const s1rows = [colHeaders];
+
+  // 부서 행
+  ALL_DEPTS.forEach(dept => {
+    const row = [dept];
+    dates.forEach(ds => {
+      const wk = getWeekKeyFromDate(ds);
+      const e = (allWeeklyData[wk]||{})[dept]||{};
+      const dow = DOW_KR[new Date(ds+'T00:00:00').getDay()];
+      const task = e[dow]||'';
+      const period = e['period_'+dow]||'';
+      // 월중계획에서 이 부서 + 이 날짜에 해당하는 행사
+      const evTitles = Object.values(allEvents)
+        .filter(ev => (ev.dept===dept) && ev.start<=ds && (ev.end||ev.start)>=ds)
+        .map(ev => '📅'+ev.title).join(' ');
+      const parts = [];
+      if(task) parts.push((period?`[${period}교시] `:'')+task);
+      if(evTitles) parts.push(evTitles);
+      row.push(parts.join(' | '));
+    });
+    row.push((allWeeklyData[getWeekKeyFromDate(dates[0])]||{})[dept]?.비고||'');
+    s1rows.push(row);
+  });
+
+  // 구분행
+  s1rows.push(['── 관리자 복무 ──', ...dates.map(()=>''), '']);
+
+  // 관리자 행
+  ['교장','1캠교감','2캠교감','교감'].forEach(mgr => {
+    const row = [personLabel(mgr)];
+    dates.forEach(ds => {
+      const duties = dutiesOnDate(ds).filter(r=>r.person===mgr);
+      row.push(duties.map(r=>r.kind+(r.from?` ${r.from}${r.to?'~'+r.to:''}`:'')+(r.place?' '+r.place:'')).join(' / '));
+    });
+    row.push('');
+    s1rows.push(row);
+  });
+
+  // ── Sheet 2: 월중계획 ──
+  const s2rows = [['날짜','종료일','요일','행사명','구분','학년','담당부서','장소','메모']];
+  const evInRange = Object.values(allEvents)
+    .filter(ev => (ev.end||ev.start) >= fromDate && ev.start <= toDate)
+    .sort((a,b) => a.start.localeCompare(b.start));
+  const typeLabel = {student:'학생', staff:'교직원', parent:'학부모', etc:'기타'};
+  evInRange.forEach(ev => {
+    const dt = new Date(ev.start+'T00:00:00');
+    s2rows.push([
+      ev.start, ev.end||ev.start, DOW_KR[dt.getDay()],
+      ev.title, typeLabel[ev.type]||ev.type||'',
+      ev.grade||'', ev.dept||'', ev.place||'', ev.memo||''
+    ]);
+  });
+
+  // 워크북 생성
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet(s1rows);
+  const ws2 = XLSX.utils.aoa_to_sheet(s2rows);
+  // 열 너비 자동
+  ws1['!cols'] = colHeaders.map((_,i) => ({wch: i===0?14:12}));
+  ws2['!cols'] = [10,10,6,20,8,10,12,12,20].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws1, '주간부서별업무');
+  XLSX.utils.book_append_sheet(wb, ws2, '월중계획');
+  XLSX.writeFile(wb, `아름중_업무계획_${fromDate}~${toDate}.xlsx`);
+  closeModal('xlsxModal');
+};
 
 window.moveViewWeek = function(dir) {
   if(!viewWeekKey) viewWeekKey = getDefaultWeekKey();
