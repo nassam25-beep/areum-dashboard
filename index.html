@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.9 / PA v3.8                 ║
+     ║  areum dashboard v2.9 / PA v3.9                 ║
      ║  2026-07-27                                     ║
      ║  v3.7: Excel 주차별 블록·가로방향·수행평가 제외      ║
      ║  v3.6: 주간업무 Excel 다운로드 + 관리자 복무 행    ║
@@ -27,7 +27,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.9 / PA v3.8</title>
+<title>areum dashboard v2.9 / PA v3.9</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════
@@ -105,6 +105,9 @@ textarea{resize:vertical;}
 .cal-cell.today{background:#eff6ff;border-color:var(--primary);font-weight:700;}
 .cal-cell.other-month{opacity:.4;}
 .cal-cell .date-num{font-size:12px;font-weight:700;margin-bottom:2px;}
+.wk-cal-badge{font-size:9px;color:#059669;font-weight:600;padding:0 4px;
+  background:#ecfdf5;border:1px solid #a7f3d0;border-radius:4px;
+  margin-top:2px;display:inline-block;line-height:1.6;}
 .cal-cell.sun .date-num{color:var(--red);}
 .cal-cell.sat .date-num{color:#2563eb;}
 .ev-dot{width:6px;height:6px;border-radius:50%;background:var(--primary);
@@ -1635,7 +1638,7 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v3.8';
+const APP_VERSION = 'v3.9';
 const APP_DATE    = '2026-07-27';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
@@ -2100,7 +2103,20 @@ function renderCalendar() {
       bars += `<span class="cal-bar-more">+${total-MAX_BARS}건 더보기</span>`;
     }
 
-    cells += `<div class="${cls}" onclick="showDay('${ds}')" ondblclick="openDayAddModal('${ds}')"><div class="date-num">${d}</div>${bars}</div>`;
+    // 주간업무 입력 현황 뱃지
+    const DOW_KR_CAL = ['일','월','화','수','목','금','토'];
+    const dowKr = DOW_KR_CAL[dow];
+    const wkKey  = getSundayKey(ds);
+    const wkData = allWeeklyData[wkKey] || {};
+    const wkCount = ALL_DEPTS.filter(dept => {
+      const e = wkData[dept] || {};
+      return e[dowKr] && String(e[dowKr]).trim();
+    }).length;
+    const wkBadge = wkCount > 0
+      ? `<span class="wk-cal-badge">📋 주간업무 ${wkCount}부서</span>`
+      : '';
+
+    cells += `<div class="${cls}" onclick="showDay('${ds}')" ondblclick="openDayAddModal('${ds}')"><div class="date-num">${d}</div>${bars}${wkBadge}</div>`;
   }
   // 다음 달 채우기
   const remain = 42 - firstDay - lastDate;
