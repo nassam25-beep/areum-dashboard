@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.9 / PA v3.9                 ║
+     ║  areum dashboard v2.9 / PA v4.0                 ║
      ║  2026-07-27                                     ║
+     ║  v4.0: 주간업무 → 부서별 업무 / 오늘 주 기본 표시   ║
      ║  v3.7: Excel 주차별 블록·가로방향·수행평가 제외      ║
      ║  v3.6: 주간업무 Excel 다운로드 + 관리자 복무 행    ║
      ║        월중계획 담당부서 콤보박스                  ║
@@ -27,7 +28,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.9 / PA v3.9</title>
+<title>areum dashboard v2.9 / PA v4.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════
@@ -679,7 +680,7 @@ textarea{resize:vertical;}
 <div class="tabs">
   <button class="tab active" data-tab="today"     onclick="switchTab('today')">🏠 오늘</button>
   <button class="tab"        data-tab="calendar"  onclick="switchTab('calendar')">📅 월중계획</button>
-  <button class="tab"        data-tab="weekly"    onclick="switchTab('weekly')">📋 주간업무</button>
+  <button class="tab"        data-tab="weekly"    onclick="switchTab('weekly')">📋 부서별 업무</button>
   <button class="tab"        data-tab="duty"      onclick="switchTab('duty')">🔐 관리자복무</button>
   <button class="tab"        data-tab="pa"        onclick="switchTab('pa')">📝 수행평가</button>
   <button class="tab"        data-tab="setup"     onclick="switchTab('setup')">⚙️ Firebase 설정</button>
@@ -759,11 +760,11 @@ textarea{resize:vertical;}
   </div>
 </div>
 
-<!-- 📋 주간업무 -->
+<!-- 📋 부서별 업무 -->
 <div class="page" id="page-weekly">
   <div class="card">
     <div class="card-hdr">
-      <div class="card-ttl">📋 주간 부서별 업무</div>
+      <div class="card-ttl">📋 부서별 업무</div>
       <span style="font-size:11px;color:var(--text-muted);">셀 더블클릭으로 입력</span>
       <button class="sbtn" style="background:#059669;color:white;font-size:11px;padding:5px 12px;" onclick="openXlsxModal()">📥 Excel 다운로드</button>
     </div>
@@ -773,7 +774,7 @@ textarea{resize:vertical;}
         <button class="sbtn" onclick="moveViewWeek(-1)">◀ 이전주</button>
         <div class="wk-nav-lbl" id="wkNavLabel">—</div>
         <button class="sbtn" onclick="moveViewWeek(1)">다음주 ▶</button>
-        <button class="sbtn" style="font-size:11px;padding:5px 10px;" onclick="resetViewWeek()">기본주차</button>
+        <button class="sbtn" style="font-size:11px;padding:5px 10px;" onclick="resetViewWeek()">이번 주</button>
       </div>
       <!-- 주간 테이블 -->
       <div style="overflow-x:auto;">
@@ -928,7 +929,7 @@ textarea{resize:vertical;}
   <div class="setup-box" style="margin-top:14px;">
     <h3>🏢 부서 설정</h3>
     <p style="font-size:12px;color:#1e3a5f;margin-bottom:12px;">
-      주간업무·월중계획·Excel에 사용할 부서 목록입니다. 한 줄에 부서명 하나씩 입력하세요.<br>
+      부서별 업무·월중계획·Excel에 사용할 부서 목록입니다. 한 줄에 부서명 하나씩 입력하세요.<br>
       저장하면 Firebase에 반영되어 모든 기기에서 즉시 적용됩니다.
     </p>
     <textarea id="deptList" rows="14"
@@ -1458,7 +1459,7 @@ textarea{resize:vertical;}
         <li><strong>오늘 일정</strong> — 월중계획 중 오늘에 해당하는 행사</li>
         <li><strong>오늘 복무</strong> — 오늘 출장·연가 등 복무 중인 관리자</li>
         <li><strong>이번 주 수행평가</strong> — 오늘 기준 전후 7일 내 수행평가 일정</li>
-        <li><strong>이번 주 핵심 업무</strong> — 오늘 요일의 부서별 주간업무</li>
+        <li><strong>이번 주 핵심 업무</strong> — 오늘 요일의 부서별 업무</li>
       </ul>
       <div class="help-tip">💡 별도 조작 없이 열면 자동으로 오늘 내용이 표시됩니다.</div>
     </div>
@@ -1490,12 +1491,12 @@ textarea{resize:vertical;}
     </div>
   </div>
 
-  <!-- 주간업무 -->
+  <!-- 부서별 업무 -->
   <div class="help-section">
-    <div class="help-section-ttl">📋 주간업무</div>
+    <div class="help-section-ttl">📋 부서별 업무</div>
     <div class="help-card">
-      <h4>📌 주간업무란?</h4>
-      <p>각 부서가 <strong>2주 후 업무 계획</strong>을 미리 입력하는 공간입니다. 한 주는 <strong>일요일부터 시작</strong>됩니다. 탭 상단에 입력 대상 날짜 범위가 자동으로 표시됩니다.</p>
+      <h4>📌 부서별 업무란?</h4>
+      <p>각 부서가 <strong>이번 주 요일별 업무 계획</strong>을 입력하는 공간입니다. 접속한 날을 포함한 주가 기본으로 표시되며, 이전·다음 주로 이동할 수 있습니다.</p>
     </div>
     <div class="help-card">
       <h4>➕ 부서 업무 입력하기</h4>
@@ -1567,7 +1568,7 @@ textarea{resize:vertical;}
       <div class="help-faq-a">아니요. 데이터는 인터넷(Firebase)에 저장되어 있으므로 파일이 바뀌어도 데이터는 그대로 유지됩니다.</div>
 
       <div class="help-faq-q">Q. 스마트폰이나 태블릿에서도 사용할 수 있나요?</div>
-      <div class="help-faq-a">네, v1.7부터 태블릿·스마트폰 반응형을 완전 지원합니다. 크롬 브라우저로 파일을 열면 화면 크기에 맞게 자동으로 레이아웃이 조정됩니다. 일정 추가·수정·실시간 공유도 모바일에서 동일하게 동작합니다. 단, 주간업무 표처럼 가로가 긴 화면은 좌우 스크롤로 확인하세요.</div>
+      <div class="help-faq-a">네, v1.7부터 태블릿·스마트폰 반응형을 완전 지원합니다. 크롬 브라우저로 파일을 열면 화면 크기에 맞게 자동으로 레이아웃이 조정됩니다. 일정 추가·수정·실시간 공유도 모바일에서 동일하게 동작합니다. 단, 부서별 업무 표처럼 가로가 긴 화면은 좌우 스크롤로 확인하세요.</div>
     </div>
   </div>
 
@@ -1638,7 +1639,7 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v3.9';
+const APP_VERSION = 'v4.0';
 const APP_DATE    = '2026-07-27';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
@@ -1999,7 +2000,7 @@ function renderToday() {
   const todayWk = getWeeklyForDate(todayStr);
   hlEl.innerHTML = todayWk.length
     ? todayWk.map(({dept,task})=>`<div class="hl-item"><strong style="color:${deptColor(dept)}">${dept}</strong> · ${task}</div>`).join('')
-    : '<div class="empty">이번 주 업무 없음 (주간업무 입력 필요)</div>';
+    : '<div class="empty">이번 주 업무 없음 (부서별 업무 입력 필요)</div>';
 
   // 급식 (Firebase 데이터 우선)
   renderMealSection();
@@ -2113,7 +2114,7 @@ function renderCalendar() {
       return e[dowKr] && String(e[dowKr]).trim();
     }).length;
     const wkBadge = wkCount > 0
-      ? `<span class="wk-cal-badge">📋 주간업무 ${wkCount}부서</span>`
+      ? `<span class="wk-cal-badge">📋 부서별 업무 ${wkCount}건</span>`
       : '';
 
     cells += `<div class="${cls}" onclick="showDay('${ds}')" ondblclick="openDayAddModal('${ds}')"><div class="date-num">${d}</div>${bars}${wkBadge}</div>`;
@@ -2181,7 +2182,7 @@ window.showDay = function(ds) {
       </div></div>`).join('');
   }
   if(dayWk.length){
-    html+=sec('📋',`주간업무 (${dow}요일)`,'var(--primary)');
+    html+=sec('📋',`부서별 업무 (${dow}요일)`,'var(--primary)');
     html+=dayWk.map(({dept,task})=>`<div class="ev-row">
       <span class="ev-dot" style="background:${deptColor(dept)}"></span>
       <div><div class="ev-title"><strong style="color:${deptColor(dept)}">${dept}</strong> · ${task}</div></div>
@@ -2214,9 +2215,7 @@ function getSundayKey(dateStr) {
 
 // 기본 주 키 = 오늘 기준 2주 후 주의 일요일
 function getDefaultWeekKey() {
-  const d = new Date(today);
-  d.setDate(d.getDate() + 14);
-  return getSundayKey(dateKey(d));
+  return getSundayKey(today); // 오늘 포함 주 (일요일 기준)
 }
 
 // sundayKey로부터 주 범위 텍스트 (일~토)
