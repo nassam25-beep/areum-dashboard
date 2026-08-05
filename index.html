@@ -2215,7 +2215,7 @@ function getSundayKey(dateStr) {
 
 // 기본 주 키 = 오늘 기준 2주 후 주의 일요일
 function getDefaultWeekKey() {
-  return getSundayKey(today); // 오늘 포함 주 (일요일 기준)
+  return getSundayKey(todayStr); // 오늘 포함 주 (일요일 기준)
 }
 
 // sundayKey로부터 주 범위 텍스트 (일~토)
