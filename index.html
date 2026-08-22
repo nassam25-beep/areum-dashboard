@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.9 / PA v4.0                 ║
+     ║  areum dashboard v2.9 / PA v4.1                 ║
      ║  2026-07-27                                     ║
      ║  v4.0: 주간업무 → 부서별 업무 / 오늘 주 기본 표시   ║
      ║  v3.7: Excel 주차별 블록·가로방향·수행평가 제외      ║
@@ -28,7 +28,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.9 / PA v4.0</title>
+<title>areum dashboard v2.9 / PA v4.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════
@@ -745,6 +745,14 @@ textarea{resize:vertical;}
       </div>
     </div>
     <div class="card-body">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 2px 10px;font-size:11px;color:#555;">
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#1d4ed8;display:inline-block;"></span>학생</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#b45309;display:inline-block;"></span>교직원</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#7c3aed;display:inline-block;"></span>학부모</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#6b7280;display:inline-block;"></span>기타</span>
+        <span style="display:flex;align-items:center;gap:4px;background:#fef3c7;border:1px solid #fbbf24;border-radius:4px;padding:1px 6px;font-weight:600;color:#92400e;">🐼 교감 관련</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#6d28d9;display:inline-block;"></span>수행평가</span>
+      </div>
       <div class="cal-grid" id="calGrid"></div>
     </div>
   </div>
@@ -1115,6 +1123,13 @@ textarea{resize:vertical;}
           <option value="parent">학부모</option>
           <option value="etc">기타</option>
         </select>
+      </div>
+      <div class="form-row" style="align-items:center;">
+        <label>교감 포함</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500;">
+          <input type="checkbox" id="evIsVP" style="width:16px;height:16px;accent-color:#d97706;">
+          <span style="color:#92400e;font-size:13px;">🐼 교감 관련 일정</span>
+        </label>
       </div>
       <div class="form-row">
         <label>학년</label>
@@ -1957,9 +1972,9 @@ function renderToday() {
   evEl.innerHTML = todayEvs.length
     ? todayEvs.map(e=>`
       <div class="ev-row" onclick="openEditEventModal('${e.id}')">
-        <span class="ev-dot" style="background:${(e.type==='student'||e.type==='haksa'||e.type==='grade')?'var(--primary)':e.type==='staff'?'var(--amber)':e.type==='parent'?'#6d28d9':'#9ca3af'}"></span>
+        <span class="ev-dot" style="background:${e.isVP?'#b45309':(e.type==='student'||e.type==='haksa'||e.type==='grade')?'var(--primary)':e.type==='staff'?'var(--amber)':e.type==='parent'?'#6d28d9':'#9ca3af'}"></span>
         <div style="flex:1;">
-          <div class="ev-title">${e.title}</div>
+          <div class="ev-title">${e.isVP?'🐼 ':''}${e.title}</div>
           <div class="ev-cat">${e.dept?'📌'+e.dept:''} ${e.place?'📍'+e.place:''}</div>
         </div>
       </div>`).join('')
@@ -2062,11 +2077,12 @@ function renderCalendar() {
       let barCls = isMulti
         ? (isStart ? 'cal-bar-start' : isEnd ? 'cal-bar-end' : 'cal-bar-mid')
         : 'cal-bar-single';
-      const col = typeHex(e.type);
+      const col = e.isVP ? '#b45309' : typeHex(e.type);
       const timeStr = (showLabel && e.period) ? `<span class="cal-bar-time">${e.period}교시</span>` : '';
+      const vpTag = (e.isVP && showLabel) ? '<span style="font-size:9px;opacity:.9;margin-right:2px;">🐼</span>' : '';
       const label = showLabel ? e.title : '';
       bars += `<span class="cal-bar ${barCls}" style="background:${col};"
-        onclick="event.stopPropagation();openEditEventModal('${e.id}')">${label}${timeStr}</span>`;
+        onclick="event.stopPropagation();openEditEventModal('${e.id}')">${vpTag}${label}${timeStr}</span>`;
       barCount++;
     }
 
@@ -2920,6 +2936,7 @@ window.openAddEventForDate = function(ds) {
   ['evTitle','evDept','evPlace','evMemo'].forEach(id=>document.getElementById(id).value='');
   document.querySelectorAll('.evPeriodCheck').forEach(cb=>cb.checked=false);
   document.getElementById('evType').value='student';
+  document.getElementById('evIsVP').checked=false;
   ['evGrade1','evGrade2','evGrade3'].forEach(id=>document.getElementById(id).checked=false);
   document.getElementById('evDeleteBtn').style.display='none';
   openModal('addEventModal');
@@ -2933,6 +2950,7 @@ window.openAddEventModal = function() {
   ['evTitle','evDept','evPlace','evMemo'].forEach(id=>document.getElementById(id).value='');
   document.querySelectorAll('.evPeriodCheck').forEach(cb=>cb.checked=false);
   document.getElementById('evType').value='student';
+  document.getElementById('evIsVP').checked=false;
   ['evGrade1','evGrade2','evGrade3'].forEach(id=>document.getElementById(id).checked=false);
   document.getElementById('evDeleteBtn').style.display='none';
   openModal('addEventModal');
@@ -2953,6 +2971,7 @@ window.openEditEventModal = function(id) {
   document.getElementById('evDept').value=ev.dept||'';
   document.getElementById('evPlace').value=ev.place||'';
   document.getElementById('evMemo').value=ev.memo||'';
+  document.getElementById('evIsVP').checked=ev.isVP||false;
   document.getElementById('evDeleteBtn').style.display='block';
   openModal('addEventModal');
 };
@@ -2972,6 +2991,7 @@ window.saveEvent = async function() {
     dept:document.getElementById('evDept').value.trim(),
     place:document.getElementById('evPlace').value.trim(),
     memo:document.getElementById('evMemo').value.trim(),
+    isVP:document.getElementById('evIsVP').checked,
     updatedAt:Date.now()
   };
   const saveRef = id ? ref(db,'monthly/'+id) : push(ref(db,'monthly'));
