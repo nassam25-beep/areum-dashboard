@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- ╔══════════════════════════════════════════════════╗
-     ║  areum dashboard v2.9 / PA v4.1                 ║
+     ║  areum dashboard v2.9 / PA v4.2                 ║
      ║  2026-07-27                                     ║
      ║  v4.0: 주간업무 → 부서별 업무 / 오늘 주 기본 표시   ║
      ║  v3.7: Excel 주차별 블록·가로방향·수행평가 제외      ║
@@ -28,7 +28,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>areum dashboard v2.9 / PA v4.1</title>
+<title>areum dashboard v2.9 / PA v4.2</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════
@@ -59,6 +59,7 @@ textarea{resize:vertical;}
 .hbtn{border:none;background:rgba(255,255,255,.2);color:white;
   padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;}
 .hbtn:hover{background:rgba(255,255,255,.35);}
+.hbtn-manual{background:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.5);}
 .sync-badge{font-size:11px;opacity:.8;margin-left:auto;}
 
 /* ── 탭 네비게이션 ── */
@@ -493,60 +494,94 @@ textarea{resize:vertical;}
    반응형 — 모바일 (≤480px)
 ══════════════════════════════════════════════════════ */
 @media(max-width:480px){
-  /* 헤더 */
-  .header{padding:10px 12px;gap:8px;}
-  .header h1{font-size:13px;}
+  /* ── 헤더 ── */
+  .header{padding:8px 10px;gap:6px;flex-wrap:wrap;}
+  .header h1{font-size:13px;min-width:0;flex:1;}
   .sync-badge{display:none;}
+  .live-badge{display:none;}
   #appVersion{display:none;}
+  /* PC 전용 버튼 모바일에서 숨김 */
+  .hbtn-pc{display:none;}
+  /* 사용설명서·로그아웃 버튼만 표시 */
+  .hbtn-manual{font-size:11px;padding:5px 10px;}
+  .hbtn{font-size:11px;padding:5px 10px;}
+  #userInfo img{width:26px;height:26px;}
+  #userName{font-size:11px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
-  /* 탭 */
-  .tabs{-webkit-overflow-scrolling:touch;}
-  .tab{padding:10px 11px;font-size:11px;}
+  /* ── 탭 ── */
+  .tabs{-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{padding:10px 10px;font-size:11px;min-width:max-content;}
 
-  /* 메인 */
-  .main{padding:8px;}
+  /* ── 메인 ── */
+  .main{padding:6px;}
+  .card{border-radius:10px;}
   .card-hdr{padding:10px 12px;flex-wrap:wrap;gap:6px;}
-  .card-body{padding:10px 12px;}
+  .card-body{padding:10px 10px;}
+  .card-ttl{font-size:13px;}
+  .sbtn{font-size:11px;padding:5px 8px;}
 
-  /* 오늘 섹션 */
+  /* ── 오늘 섹션 ── */
   .today-section{grid-template-columns:1fr;}
-  .today-date-banner{padding:16px 18px;gap:14px;}
-  .tdb-day{font-size:52px;}
-  .tdb-dow{font-size:19px;}
+  .today-date-banner{padding:14px 16px;gap:12px;}
+  .tdb-day{font-size:48px;}
+  .tdb-dow{font-size:17px;}
   .tdb-ym{font-size:12px;}
   .tdb-stat{font-size:11px;padding:3px 9px;}
+  .tdb-stats{gap:4px;}
 
-  /* 달력 */
-  .cal-cell{min-height:42px;padding:2px 3px;}
-  .cal-cell .date-num{font-size:11px;}
-  .ev-chip{font-size:9px;padding:1px 3px;margin-bottom:0;}
+  /* ── 달력 ── */
+  .cal-cell{min-height:42px;padding:2px 2px;}
+  .cal-cell .date-num{font-size:10px;}
+  .cal-bar{font-size:9px !important;padding:1px 3px !important;}
+  .cal-bar-time{display:none;}
+  .wk-cal-badge{font-size:8px;}
+  /* 달력 범례 한 줄 스크롤 */
+  #page-calendar .card-body > div:first-child{
+    flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;}
 
-  /* 복무 */
-  .duty-av{width:38px;height:38px;font-size:20px;}
-  .duty-name{font-size:12px;}
-
-  /* 모달 */
-  .modal{padding:16px 14px;}
+  /* ── 모달 전면 ── */
+  .overlay{padding:0;align-items:flex-end;}
+  .modal{border-radius:16px 16px 0 0;max-width:100%;max-height:92vh;
+    padding:18px 14px;border-bottom-left-radius:0;border-bottom-right-radius:0;}
+  .modal-ttl{font-size:15px;}
   .g2{grid-template-columns:1fr !important;}
   .form-actions{flex-wrap:wrap;}
-  .form-actions .btn{flex:1;text-align:center;}
+  .form-actions .btn{flex:1;text-align:center;min-height:40px;}
 
-  /* 주간업무 — 모바일: 가로 스크롤 + 부서열 고정 */
+  /* ── 부서별 업무 ── */
   .wk-table th,.wk-table td{padding:5px 4px;font-size:10px;}
-  #page-weekly .card-body > div[style*="overflow-x"]{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .wk-table{min-width:560px;} /* 스크롤 가능하도록 최소 너비 보장 */
+  .wk-table{min-width:540px;}
   .wk-dept{position:sticky;left:0;background:white;z-index:1;box-shadow:2px 0 4px rgba(0,0,0,.06);}
   .wk-table tr:hover .wk-dept{background:#f0f9ff;}
   .wk-table th:first-child{position:sticky;left:0;z-index:2;background:#1e40af;}
-  /* 헤더 버튼 줄바꿈 방지 */
-  .wk-nav{gap:6px;}
-  .wk-nav .sbtn{font-size:11px;padding:5px 8px;}
+  .wk-nav{gap:4px;}
+  .wk-nav .sbtn{font-size:10px;padding:4px 6px;}
 
-  /* 사용법 */
-  .help-hero{padding:18px 16px;}
-  .help-hero h2{font-size:17px;}
-  .help-card{padding:12px 14px;}
-  .help-admin-row{gap:10px;}
+  /* ── 수행평가 히트맵 ── */
+  .pa-heatmap-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .pa-heatmap-grid{min-width:480px;}
+  .pa-grid-2col{grid-template-columns:1fr;}
+  .pa-card{padding:10px 12px;}
+  .pa-subj-btn-row{flex-wrap:wrap;}
+
+  /* ── 관리자복무 ── */
+  .duty-av{width:36px;height:36px;font-size:18px;}
+  .duty-name{font-size:12px;}
+  .duty-list-tbl{min-width:460px;}
+  #ganttContainer{min-width:500px;}
+
+  /* ── 설정 탭 ── */
+  .setup-box{padding:12px;}
+  .setup-input-row{grid-template-columns:1fr !important;}
+
+  /* ── 사용법 탭 ── */
+  .help-hero{padding:16px 14px;}
+  .help-hero h2{font-size:16px;}
+  .help-card{padding:10px 12px;}
+  .help-admin-row{gap:8px;}
+  .help-grid{grid-template-columns:1fr;}
 }
 
 /* 달력 — 모바일에서 칩 1개만 표시 */
@@ -667,8 +702,9 @@ textarea{resize:vertical;}
   <span class="live-badge"><span class="live-dot"></span>실시간</span>
   <span class="sync-badge" id="syncBadge">Firebase 연결 중…</span>
   <span style="font-size:10px;color:var(--text-muted);background:#f1f5f9;border-radius:10px;padding:2px 8px;font-weight:700;" id="appVersion">v1.5</span>
-  <button class="hbtn" onclick="openStartPageModal()">🏠 시작페이지 설정</button>
-  <button class="hbtn" onclick="openNameModal()">⚙ 학교명</button>
+  <button class="hbtn hbtn-manual" onclick="window.open('./manual.html','_blank')">📖 사용설명서</button>
+  <button class="hbtn hbtn-pc" onclick="openStartPageModal()">🏠 시작페이지 설정</button>
+  <button class="hbtn hbtn-pc" onclick="openNameModal()">⚙ 학교명</button>
   <div id="userInfo" style="display:none;">
     <img id="userPhoto" src="" alt="">
     <span id="userName" style="color:white;"></span>
@@ -714,8 +750,8 @@ textarea{resize:vertical;}
     </div>
   </div>
   <div class="card">
-    <div class="card-hdr"><div class="card-ttl">🌟 이번 주 핵심 업무</div></div>
-    <div class="card-body" id="todayHighlights"><div class="empty">핵심 업무 없음</div></div>
+    <div class="card-hdr"><div class="card-ttl">📋 부서별 업무</div></div>
+    <div class="card-body" id="todayHighlights"><div class="empty">오늘 부서별 업무 없음</div></div>
   </div>
   <div class="card">
     <div class="card-hdr">
@@ -1474,7 +1510,7 @@ textarea{resize:vertical;}
         <li><strong>오늘 일정</strong> — 월중계획 중 오늘에 해당하는 행사</li>
         <li><strong>오늘 복무</strong> — 오늘 출장·연가 등 복무 중인 관리자</li>
         <li><strong>이번 주 수행평가</strong> — 오늘 기준 전후 7일 내 수행평가 일정</li>
-        <li><strong>이번 주 핵심 업무</strong> — 오늘 요일의 부서별 업무</li>
+        <li><strong>부서별 업무</strong> — 오늘 요일의 부서별 업무</li>
       </ul>
       <div class="help-tip">💡 별도 조작 없이 열면 자동으로 오늘 내용이 표시됩니다.</div>
     </div>
@@ -2010,7 +2046,7 @@ function renderToday() {
       </div>`).join('')
     : '<div class="empty">이번 주 수행평가 없음</div>';
 
-  // 핵심 업무 (주간업무 중 오늘 요일에 해당하는 것)
+  // 부서별 업무 (주간업무 중 오늘 요일에 해당하는 것)
   const hlEl = document.getElementById('todayHighlights');
   const todayWk = getWeeklyForDate(todayStr);
   hlEl.innerHTML = todayWk.length
