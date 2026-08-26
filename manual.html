@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>아름중학교 대시보드 사용설명서</title>
+<style>
+  :root{
+    --primary:#2563eb;
+    --green:#059669;
+    --purple:#7c3aed;
+    --amber:#d97706;
+    --vp:#b45309;
+    --bg:#f8fafc;
+    --card:#fff;
+    --border:#e2e8f0;
+    --text:#1e293b;
+    --sub:#64748b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.7;}
+
+  .hero{background:linear-gradient(135deg,#1e40af,#2563eb 60%,#0891b2);color:#fff;padding:48px 24px 40px;text-align:center;}
+  .hero h1{font-size:28px;font-weight:800;margin-bottom:8px;letter-spacing:-0.5px;}
+  .hero p{font-size:15px;opacity:.88;max-width:500px;margin:0 auto;}
+  .hero .version{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);border-radius:20px;padding:3px 14px;font-size:12px;margin-top:12px;letter-spacing:.5px;}
+
+  .toc{max-width:780px;margin:28px auto 0;padding:0 16px;}
+  .toc-card{background:#fff;border-radius:16px;padding:24px 28px;box-shadow:0 2px 12px rgba(0,0,0,.08);}
+  .toc-card h2{font-size:14px;color:var(--sub);font-weight:600;margin-bottom:14px;letter-spacing:1px;}
+  .toc-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .toc-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;transition:background .15s;text-decoration:none;color:var(--text);}
+  .toc-item:hover{background:#f1f5f9;}
+  .toc-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .toc-label{font-size:13px;font-weight:600;}
+  .toc-sub{font-size:11px;color:var(--sub);}
+
+  .content{max-width:780px;margin:0 auto;padding:16px 16px 60px;}
+
+  .section{background:var(--card);border-radius:16px;padding:28px;margin-top:24px;box-shadow:0 1px 6px rgba(0,0,0,.07);}
+  .section-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.5px;padding:4px 12px;border-radius:20px;margin-bottom:14px;}
+  .section h2{font-size:20px;font-weight:800;margin-bottom:4px;}
+  .section .section-desc{font-size:14px;color:var(--sub);margin-bottom:20px;}
+
+  .user-types{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 24px;}
+  .user-card{border-radius:12px;padding:16px;text-align:center;}
+  .user-card .icon{font-size:28px;margin-bottom:6px;}
+  .user-card .name{font-size:13px;font-weight:700;margin-bottom:2px;}
+  .user-card .role{font-size:11px;opacity:.75;}
+
+  .steps{display:flex;flex-direction:column;gap:16px;}
+  .step{display:flex;gap:14px;align-items:flex-start;}
+  .step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;color:#fff;}
+  .step-body{flex:1;}
+  .step-title{font-size:15px;font-weight:700;margin-bottom:4px;}
+  .step-desc{font-size:13px;color:var(--sub);line-height:1.6;}
+
+  .tip{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;font-size:13px;color:#166534;margin-top:12px;display:flex;gap:8px;align-items:flex-start;}
+  .warn{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;font-size:13px;color:#92400e;margin-top:12px;display:flex;gap:8px;align-items:flex-start;}
+  .info{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;font-size:13px;color:#1e40af;margin-top:12px;display:flex;gap:8px;align-items:flex-start;}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
+  .legend-item{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;}
+  .legend-dot{width:14px;height:14px;border-radius:4px;}
+
+  .faq-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+  .faq-q{padding:14px 16px;font-size:14px;font-weight:700;background:#f8fafc;}
+  .faq-a{padding:12px 16px 14px;font-size:13px;color:var(--sub);border-top:1px solid var(--border);line-height:1.7;}
+
+  .mockup{background:#f1f5f9;border-radius:12px;padding:16px;margin:14px 0;border:1px solid var(--border);}
+  .mockup-bar{display:flex;gap:5px;margin-bottom:10px;}
+  .mockup-bar span{width:10px;height:10px;border-radius:50%;}
+  .mockup-inner{background:#fff;border-radius:8px;padding:12px;font-size:12px;border:1px solid var(--border);}
+
+  .tab-guide{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;}
+  .tab-card{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .tab-card .tab-icon{font-size:20px;margin-bottom:6px;}
+  .tab-card .tab-name{font-size:13px;font-weight:700;margin-bottom:3px;}
+  .tab-card .tab-desc{font-size:11px;color:var(--sub);line-height:1.5;}
+
+  .btn-link{display:inline-flex;align-items:center;gap:6px;background:var(--primary);color:#fff;padding:10px 20px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:700;margin-top:16px;}
+
+  footer{text-align:center;padding:32px 16px;color:var(--sub);font-size:12px;}
+
+  @media(max-width:600px){
+    .toc-list{grid-template-columns:1fr;}
+    .user-types{grid-template-columns:1fr;}
+    .tab-guide{grid-template-columns:1fr;}
+    .hero h1{font-size:22px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div style="font-size:36px;margin-bottom:10px;">🏫</div>
+  <h1>아름중학교 종합 대시보드</h1>
+  <p>선생님들을 위한 친절한 사용설명서<br>컴퓨터에 익숙하지 않으셔도 괜찮아요!</p>
+  <span class="version">PA v4.2 · 2026-08-24</span>
+</div>
+
+<div class="toc">
+  <div class="toc-card">
+    <h2>📋 목차 — 원하는 항목을 클릭하세요</h2>
+    <div class="toc-list">
+      <a class="toc-item" href="#intro">
+        <div class="toc-icon" style="background:#dbeafe;">🌐</div>
+        <div><div class="toc-label">처음 시작하기</div><div class="toc-sub">접속 방법 · 로그인</div></div>
+      </a>
+      <a class="toc-item" href="#overview">
+        <div class="toc-icon" style="background:#dcfce7;">📊</div>
+        <div><div class="toc-label">화면 구성 안내</div><div class="toc-sub">각 탭의 역할 설명</div></div>
+      </a>
+      <a class="toc-item" href="#dept-head">
+        <div class="toc-icon" style="background:#fef3c7;">📝</div>
+        <div><div class="toc-label">부장 선생님 가이드</div><div class="toc-sub">부서별 업무 입력</div></div>
+      </a>
+      <a class="toc-item" href="#monthly">
+        <div class="toc-icon" style="background:#ede9fe;">📅</div>
+        <div><div class="toc-label">월중계획 입력</div><div class="toc-sub">학교 행사 · 교감 일정</div></div>
+      </a>
+      <a class="toc-item" href="#teacher">
+        <div class="toc-icon" style="background:#fce7f3;">✏️</div>
+        <div><div class="toc-label">선생님 가이드</div><div class="toc-sub">수행평가 입력</div></div>
+      </a>
+      <a class="toc-item" href="#admin">
+        <div class="toc-icon" style="background:#ecfdf5;">🗂️</div>
+        <div><div class="toc-label">업무담당 가이드</div><div class="toc-sub">교감 일정 확인 · 복무 기록</div></div>
+      </a>
+      <a class="toc-item" href="#vp">
+        <div class="toc-icon" style="background:#fef9c3;">🐼</div>
+        <div><div class="toc-label">교감 일정 색상 안내</div><div class="toc-sub">달력에서 구분하는 법</div></div>
+      </a>
+      <a class="toc-item" href="#faq">
+        <div class="toc-icon" style="background:#f1f5f9;">❓</div>
+        <div><div class="toc-label">자주 묻는 질문 FAQ</div><div class="toc-sub">헷갈리는 점 모음</div></div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ① 처음 시작하기 -->
+<div class="section" id="intro">
+  <div class="section-badge" style="background:#dbeafe;color:#1e40af;">🌐 STEP 1</div>
+  <h2>처음 시작하기</h2>
+  <p class="section-desc">대시보드에 처음 접속하는 방법을 안내해드립니다.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num" style="background:var(--primary);">1</div>
+      <div class="step-body">
+        <div class="step-title">인터넷 주소창에 대시보드 주소를 입력하세요</div>
+        <div class="step-desc">
+          크롬(Chrome) 브라우저를 여신 후, 주소창에 아래 주소를 입력하고 엔터를 누르세요.<br><br>
+          <span style="background:#1e293b;color:#7dd3fc;border-radius:6px;padding:6px 14px;font-family:monospace;font-size:13px;display:inline-block;">
+            https://nassam25-beep.github.io/areum-dashboard/
+          </span>
+        </div>
+        <div class="tip">💡 북마크(즐겨찾기)에 등록해 두시면 다음부터 쉽게 접속할 수 있어요!</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:var(--primary);">2</div>
+      <div class="step-body">
+        <div class="step-title">구글 계정으로 로그인하세요</div>
+        <div class="step-desc">
+          화면 오른쪽 위에 있는 <strong>🔐 Google 로그인</strong> 버튼을 클릭하세요.<br>
+          아름중학교 계정(<code>@areum.sjedums.kr</code>)으로 로그인해야 사용할 수 있어요.
+        </div>
+        <div class="warn">⚠️ 개인 구글 계정(@gmail.com)으로는 로그인되지 않습니다. 반드시 학교 계정을 사용하세요.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:var(--primary);">3</div>
+      <div class="step-body">
+        <div class="step-title">대시보드가 열리면 준비 완료!</div>
+        <div class="step-desc">로그인하면 오늘 날짜 기준으로 달력과 일정이 자동으로 표시됩니다.<br>본인의 역할에 맞는 탭을 눌러서 사용하시면 됩니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ② 화면 구성 -->
+<div class="section" id="overview">
+  <div class="section-badge" style="background:#dcfce7;color:#166534;">📊 화면 구성</div>
+  <h2>화면이 어떻게 생겼나요?</h2>
+  <p class="section-desc">대시보드는 여러 탭으로 나뉘어 있어요. 탭을 클릭해서 이동하세요.</p>
+  <div class="user-types">
+    <div class="user-card" style="background:#fef3c7;border:1px solid #fde68a;">
+      <div class="icon">👨‍💼</div>
+      <div class="name">부장 선생님</div>
+      <div class="role">부서별 업무 입력</div>
+    </div>
+    <div class="user-card" style="background:#ede9fe;border:1px solid #ddd6fe;">
+      <div class="icon">👩‍🏫</div>
+      <div class="name">일반 선생님</div>
+      <div class="role">수행평가 입력</div>
+    </div>
+    <div class="user-card" style="background:#ecfdf5;border:1px solid #a7f3d0;">
+      <div class="icon">🗂️</div>
+      <div class="name">업무 담당</div>
+      <div class="role">교감 일정 확인 · 복무</div>
+    </div>
+  </div>
+  <div class="tab-guide">
+    <div class="tab-card">
+      <div class="tab-icon">🏠</div>
+      <div class="tab-name">홈 탭</div>
+      <div class="tab-desc">오늘의 일정 · 급식 · <strong>오늘 요일의 부서별 업무</strong>를 한눈에 볼 수 있어요.</div>
+    </div>
+    <div class="tab-card">
+      <div class="tab-icon">📅</div>
+      <div class="tab-name">월중계획 탭</div>
+      <div class="tab-desc">한 달 달력 형태로 학교 행사와 일정을 봅니다. 교감 일정도 여기서 입력해요.</div>
+    </div>
+    <div class="tab-card">
+      <div class="tab-icon">📋</div>
+      <div class="tab-name">부서별 업무 탭</div>
+      <div class="tab-desc">이번 주 각 부서의 업무를 요일별로 입력하는 곳이에요. (부장 선생님 전용)</div>
+    </div>
+    <div class="tab-card">
+      <div class="tab-icon">✏️</div>
+      <div class="tab-name">수행평가 탭</div>
+      <div class="tab-desc">교과별 수행평가 계획을 입력하고, 학급별로 확인해요. (선생님 전용)</div>
+    </div>
+    <div class="tab-card">
+      <div class="tab-icon">📁</div>
+      <div class="tab-name">관리자복무 탭</div>
+      <div class="tab-desc">교장·교감 선생님의 출장, 연수, 외출 등 복무 일정을 기록해요.</div>
+    </div>
+    <div class="tab-card">
+      <div class="tab-icon">📥</div>
+      <div class="tab-name">엑셀 다운로드</div>
+      <div class="tab-desc">월중계획과 부서별 업무를 엑셀 파일로 다운받아 보관할 수 있어요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ③ 부장 선생님 -->
+<div class="section" id="dept-head">
+  <div class="section-badge" style="background:#fef3c7;color:#92400e;">👨‍💼 부장 선생님</div>
+  <h2>부서별 업무 입력하기</h2>
+  <p class="section-desc">매주 우리 부서의 업무를 요일별로 입력해 주세요. 입력한 내용은 달력에도 표시됩니다.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num" style="background:#d97706;">1</div>
+      <div class="step-body">
+        <div class="step-title">상단 탭에서 <strong>📋 부서별 업무</strong>를 클릭하세요</div>
+        <div class="step-desc">이번 주 날짜가 자동으로 선택되어 있습니다.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:#d97706;">2</div>
+      <div class="step-body">
+        <div class="step-title">우리 부서 행을 찾아 업무를 입력하세요</div>
+        <div class="step-desc">
+          왼쪽에서 본인 부서를 찾으세요. 각 요일 칸을 클릭하면 입력창이 열립니다.<br>
+          업무 내용을 짧게 써주시면 됩니다. (예: 1학기 성적 처리, 담임 연수, 학부모 상담)
+        </div>
+        <div class="tip">💡 입력창에 내용을 쓰고 <strong>Enter</strong> 키를 누르거나 다른 칸을 클릭하면 자동 저장됩니다!</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:#d97706;">3</div>
+      <div class="step-body">
+        <div class="step-title">다른 주 업무는 ◀ ▶ 버튼으로 이동해서 입력하세요</div>
+        <div class="step-desc">다음 주 날짜로 이동해서 미리 입력해 두시면 편리해요.</div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-bar"><span style="background:#ff6b6b;"></span><span style="background:#ffd93d;"></span><span style="background:#6bcb77;"></span></div>
+    <div class="mockup-inner">
+      <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:8px;">📋 부서별 업무 — 2026년 8월 3주</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <tr style="background:#f8fafc;">
+          <td style="padding:5px 8px;font-weight:700;border:1px solid #e2e8f0;width:80px;">부서</td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;text-align:center;">월</td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;text-align:center;">화</td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;text-align:center;">수</td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;text-align:center;">목</td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;text-align:center;">금</td>
+        </tr>
+        <tr>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;font-weight:600;font-size:10px;">교무부</td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;color:#2563eb;">전교생 조회</td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;"></td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;color:#2563eb;">학부모 상담</td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;"></td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;"></td>
+        </tr>
+        <tr>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;font-weight:600;font-size:10px;">1학년부</td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;"></td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;color:#2563eb;">학년회의</td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;"></td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;"></td>
+          <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;color:#2563eb;">성적 마감</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="info">📌 <strong>월중계획과의 차이:</strong> 부서별 업무는 <em>이번 주 요일별 세부 업무</em>를 기록하는 곳이에요. 학교 전체 행사는 월중계획에 입력해 주세요.</div>
+</div>
+
+<!-- ④ 월중계획 -->
+<div class="section" id="monthly">
+  <div class="section-badge" style="background:#ede9fe;color:#5b21b6;">📅 월중계획</div>
+  <h2>월중계획 일정 추가하기</h2>
+  <p class="section-desc">학교 전체 행사나 교감 선생님 관련 일정을 달력에 입력하는 방법입니다.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num" style="background:#7c3aed;">1</div>
+      <div class="step-body">
+        <div class="step-title">상단에서 <strong>📅 월중계획</strong> 탭을 클릭하세요</div>
+        <div class="step-desc">달력이 표시됩니다.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:#7c3aed;">2</div>
+      <div class="step-body">
+        <div class="step-title">원하는 날짜를 클릭하거나, <strong>[+ 일정 추가]</strong> 버튼을 누르세요</div>
+        <div class="step-desc">일정 입력 창이 열립니다.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:#7c3aed;">3</div>
+      <div class="step-body">
+        <div class="step-title">일정 정보를 입력하세요</div>
+        <div class="step-desc">
+          <ul style="margin-top:6px;padding-left:18px;font-size:13px;color:#64748b;">
+            <li style="margin-bottom:4px;"><strong>날짜</strong>: 시작일과 종료일 (하루짜리는 같은 날짜)</li>
+            <li style="margin-bottom:4px;"><strong>행사명</strong>: 일정 이름 (예: 1학기 기말고사, 교원 연수)</li>
+            <li style="margin-bottom:4px;"><strong>구분</strong>: 학생 / 교직원 / 학부모 / 기타 중 선택</li>
+            <li style="margin-bottom:4px;"><strong>담당부서</strong>: 담당하는 부서 선택</li>
+            <li style="margin-bottom:4px;"><strong>🐼 교감 관련 일정</strong>: 교감 선생님이 참석하시는 일정이면 체크! (달력에 갈색으로 표시됨)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:#7c3aed;">4</div>
+      <div class="step-body">
+        <div class="step-title"><strong>[저장]</strong> 버튼을 클릭하세요</div>
+        <div class="step-desc">달력에 바로 표시됩니다!</div>
+        <div class="tip">💡 수정할 때는 달력에 표시된 일정 막대를 클릭하면 수정 창이 열려요.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑤ 교감 일정 색상 -->
+<div class="section" id="vp">
+  <div class="section-badge" style="background:#fef9c3;color:#78350f;">🐼 교감 일정</div>
+  <h2>달력에서 교감 일정 구분하기</h2>
+  <p class="section-desc">달력을 보면 일정 종류에 따라 색상이 다르게 표시됩니다.</p>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8;"></div> 학생 관련</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#b45309;"></div> 교직원 관련</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed;"></div> 학부모 관련</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6b7280;"></div> 기타</div>
+    <div class="legend-item" style="background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;padding:2px 8px;color:#92400e;">🐼 교감 관련</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6d28d9;"></div> 수행평가</div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-bar"><span style="background:#ff6b6b;"></span><span style="background:#ffd93d;"></span><span style="background:#6bcb77;"></span></div>
+    <div class="mockup-inner">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:10px;text-align:center;">
+        <div style="font-weight:700;color:#ef4444;">일</div><div style="font-weight:700;">월</div><div style="font-weight:700;">화</div><div style="font-weight:700;">수</div><div style="font-weight:700;">목</div><div style="font-weight:700;">금</div><div style="font-weight:700;color:#3b82f6;">토</div>
+        <div></div><div></div>
+        <div style="padding:4px 0;border:1px solid #e2e8f0;border-radius:4px;">1</div>
+        <div style="padding:4px 0;border:1px solid #e2e8f0;border-radius:4px;">
+          2<div style="background:#1d4ed8;color:#fff;border-radius:2px;font-size:8px;padding:1px 2px;margin-top:2px;">전교생 조회</div>
+        </div>
+        <div style="padding:4px 0;border:1px solid #e2e8f0;border-radius:4px;">3</div>
+        <div style="padding:4px 0;border:1px solid #e2e8f0;border-radius:4px;">
+          4<div style="background:#b45309;color:#fff;border-radius:2px;font-size:8px;padding:1px 2px;margin-top:2px;">🐼 교원 연수</div>
+        </div>
+        <div style="padding:4px 0;border:1px solid #e2e8f0;border-radius:4px;color:#3b82f6;">5</div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:#78350f;background:#fef3c7;border-radius:4px;padding:4px 8px;">↑ 갈색 🐼 표시 = 교감 선생님 관련 일정</div>
+    </div>
+  </div>
+  <div class="info">📌 업무담당 선생님들은 갈색 🐼 표시가 있는 일정을 확인하여 교감 선생님의 일정을 파악하고 관련 업무를 준비할 수 있습니다.</div>
+</div>
+
+<!-- ⑥ 일반 선생님 -->
+<div class="section" id="teacher">
+  <div class="section-badge" style="background:#fce7f3;color:#9d174d;">✏️ 일반 선생님</div>
+  <h2>수행평가 입력하기</h2>
+  <p class="section-desc">담당 교과의 수행평가 계획을 입력해 주세요.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num" style="background:#db2777;">1</div>
+      <div class="step-body">
+        <div class="step-title"><strong>✏️ 수행평가</strong> 탭을 클릭하세요</div>
+        <div class="step-desc">학급×날짜 현황판이 보입니다.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:#db2777;">2</div>
+      <div class="step-body">
+        <div class="step-title"><strong>[+ 수행평가 추가]</strong> 버튼을 클릭하세요</div>
+        <div class="step-desc">또는 월중계획 달력에서 날짜를 클릭 후 [+ 수행평가]를 눌러도 됩니다.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:#db2777;">3</div>
+      <div class="step-body">
+        <div class="step-title">교과와 날짜, 대상 학급을 선택하세요</div>
+        <div class="step-desc">
+          <ul style="margin-top:6px;padding-left:18px;font-size:13px;color:#64748b;">
+            <li style="margin-bottom:4px;"><strong>날짜</strong>: 수행평가 실시일</li>
+            <li style="margin-bottom:4px;"><strong>교과</strong>: 국어, 수학, 영어 등 과목 선택</li>
+            <li style="margin-bottom:4px;"><strong>담당 교사</strong>: 본인 이름</li>
+            <li style="margin-bottom:4px;"><strong>교시</strong>: 몇 교시에 실시하는지 (해당 교시 모두 체크)</li>
+            <li style="margin-bottom:4px;"><strong>대상 학급</strong>: 어느 반에서 실시하는지 (여러 반 선택 가능)</li>
+          </ul>
+        </div>
+        <div class="tip">💡 같은 날 같은 교과를 여러 반에서 실시한다면, 반을 모두 체크한 후 한 번에 저장하세요!</div>
+      </div>
+    </div>
+  </div>
+  <div class="warn">⚠️ 수행평가는 엑셀 인쇄물에 포함되지 않습니다. 달력과 대시보드에서만 확인 가능해요.</div>
+</div>
+
+<!-- ⑦ 업무담당 -->
+<div class="section" id="admin">
+  <div class="section-badge" style="background:#ecfdf5;color:#065f46;">🗂️ 업무담당 선생님</div>
+  <h2>관리자 복무 기록 · 교감 일정 확인</h2>
+  <p class="section-desc">교장·교감 선생님의 출장, 연수, 외출 등을 기록하고 달력에서 일정을 확인하세요.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num" style="background:#059669;">1</div>
+      <div class="step-body">
+        <div class="step-title">달력에서 🐼 갈색 표시 일정을 확인하세요</div>
+        <div class="step-desc">
+          월중계획 달력에서 갈색으로 칠해진 막대가 교감 선생님이 참석하시는 일정입니다.<br>
+          해당 일정을 클릭하면 상세 내용(장소, 메모 등)을 볼 수 있어요.
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:#059669;">2</div>
+      <div class="step-body">
+        <div class="step-title">복무 기록은 <strong>📁 관리자복무</strong> 탭에서 입력하세요</div>
+        <div class="step-desc">
+          <strong>[+ 복무 추가]</strong> 버튼을 누르세요.
+          <ul style="margin-top:6px;padding-left:18px;font-size:13px;color:#64748b;">
+            <li style="margin-bottom:4px;"><strong>대상</strong>: 교장 / 1캠교감 / 2캠교감 / 교감 중 선택</li>
+            <li style="margin-bottom:4px;"><strong>복무 종류</strong>: 출장 / 연수 / 외출 / 병가 / 지각 / 조퇴 등</li>
+            <li style="margin-bottom:4px;"><strong>날짜</strong>: 복무 시작일 ~ 종료일</li>
+            <li style="margin-bottom:4px;"><strong>사유/장소</strong>: 출장지나 연수 기관명</li>
+          </ul>
+        </div>
+        <div class="tip">💡 입력한 복무 기록은 달력에도 함께 표시되며, 간트 차트 보기로도 확인할 수 있어요.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:#059669;">3</div>
+      <div class="step-body">
+        <div class="step-title">엑셀로 다운로드하여 보관하세요</div>
+        <div class="step-desc">
+          홈 화면 또는 월중계획 탭에서 <strong>[📥 엑셀 다운로드]</strong> 버튼을 클릭하면<br>
+          월중계획과 부서별 업무가 엑셀 파일로 저장됩니다.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⑧ FAQ -->
+<div class="section" id="faq">
+  <div class="section-badge" style="background:#f1f5f9;color:#475569;">❓ FAQ</div>
+  <h2>자주 묻는 질문</h2>
+  <p class="section-desc">사용 중 헷갈리는 부분을 모았습니다.</p>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 로그인이 안 돼요 🔐</div>
+    <div class="faq-a">반드시 학교 계정(<strong>@areum.sjedums.kr</strong>)으로 로그인해야 합니다. 개인 Gmail(@gmail.com)은 접속이 차단되어 있습니다. 계정 문제는 교감 선생님께 문의하세요.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 입력한 내용이 사라졌어요 💨</div>
+    <div class="faq-a">내용 입력 후 <strong>[저장]</strong> 버튼을 꼭 눌러야 합니다. 부서별 업무는 Enter 키 또는 다른 칸 클릭 시 자동 저장되지만, 일정 추가 모달은 반드시 저장 버튼을 누르세요.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 다른 사람이 입력한 내용이 보이지 않아요 👀</div>
+    <div class="faq-a">페이지를 새로고침(F5 키 또는 브라우저 새로고침 버튼)하면 최신 내용이 불러와집니다.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 수행평가와 월중계획 어디에 입력해야 하나요? 📝</div>
+    <div class="faq-a">
+      <strong>월중계획</strong> → 학교 전체 행사 (체육대회, 기말고사, 입학식 등)<br>
+      <strong>부서별 업무</strong> → 이번 주 내 부서의 요일별 세부 업무<br>
+      <strong>수행평가</strong> → 교과별 수행평가 실시 날짜와 대상 학급
+    </div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 달력에서 일정을 삭제하고 싶어요 🗑️</div>
+    <div class="faq-a">달력에 표시된 일정 막대를 클릭하면 수정 창이 열립니다. 창 왼쪽 아래에 <strong>[삭제]</strong> 버튼(빨간색)이 있어요. 삭제 후에는 복구가 안 되니 신중하게 눌러주세요.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 교감 포함 체크박스는 언제 사용하나요? 🐼</div>
+    <div class="faq-a">월중계획에서 일정을 추가할 때, 교감 선생님이 참석하거나 관련된 일정이라면 <strong>"🐼 교감 관련 일정"</strong> 체크박스에 체크해주세요. 달력에서 갈색으로 표시되어 업무담당 선생님들이 쉽게 확인할 수 있습니다.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 엑셀 파일은 어떻게 다운받나요? 📥</div>
+    <div class="faq-a">홈 화면 오른쪽 상단 또는 월중계획 탭에서 <strong>[📥 엑셀]</strong> 버튼을 클릭하세요. 파일이 자동으로 컴퓨터 다운로드 폴더에 저장됩니다.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q. 핸드폰에서도 사용할 수 있나요? 📱</div>
+    <div class="faq-a">네! 스마트폰 브라우저(크롬 추천)에서 같은 주소로 접속하면 됩니다. 기능은 모두 동일하게 사용할 수 있어요.</div>
+  </div>
+</div>
+
+<!-- 접속 링크 -->
+<div class="section" style="text-align:center;">
+  <div style="font-size:32px;margin-bottom:12px;">🔗</div>
+  <h2 style="margin-bottom:8px;">바로 접속하기</h2>
+  <p style="font-size:13px;color:var(--sub);margin-bottom:4px;">아래 버튼을 클릭하거나, 주소를 브라우저 주소창에 붙여넣으세요.</p>
+  <a class="btn-link" href="https://nassam25-beep.github.io/areum-dashboard/" target="_blank">
+    🌐 대시보드 열기
+  </a>
+  <div style="margin-top:14px;font-family:monospace;font-size:12px;background:#f1f5f9;border-radius:8px;padding:10px 16px;color:#475569;word-break:break-all;">
+    https://nassam25-beep.github.io/areum-dashboard/
+  </div>
+  <div class="tip" style="margin-top:16px;text-align:left;">💡 이 주소를 카카오톡 단체방에 공유하거나 북마크에 저장해 두시면 편리해요!</div>
+</div>
+
+</div>
+
+<footer>
+  아름중학교 종합 대시보드 사용설명서 · PA v4.2 · 2026-08-24<br>
+  문의사항은 교감 선생님 또는 업무담당 선생님께 말씀해 주세요.
+</footer>
+
+</body>
+</html>
