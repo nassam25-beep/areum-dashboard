@@ -1690,8 +1690,8 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v4.2';
-const APP_DATE    = '2026-08-24';
+const APP_VERSION = 'v4.3';
+const APP_DATE    = '2026-09-14';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
   if(vEl) vEl.textContent = APP_VERSION;
@@ -1846,6 +1846,19 @@ function startListeners() {
   onValue(mealRef, snap => {
     allMeal = snap.val() || {};
     if(activeTab === 'today') renderMealSection();
+  });
+
+  // NEIS 설정 Firebase 공유 (모든 기기에서 급식 확인 가능)
+  const neisConfigRef = ref(db, 'config/neis');
+  onValue(neisConfigRef, snap => {
+    const fbCfg = snap.val();
+    if(fbCfg && fbCfg.atptCode && fbCfg.schulCode) {
+      // 로컬에 설정이 없으면 Firebase 설정으로 대체
+      if(!neisConfig.atptCode) {
+        neisConfig = fbCfg;
+        if(activeTab === 'today') renderMealSection();
+      }
+    }
   });
 
   // 학교 구조 설정
@@ -2036,15 +2049,20 @@ function renderToday() {
   const fmt = d => d.getFullYear()+'-'+S2(d.getMonth()+1)+'-'+S2(d.getDate());
   const weekPAs  = paArray().filter(p=>p.date>=fmt(weekAgo)&&p.date<=fmt(weekLater));
   const paEl = document.getElementById('todayPA');
-  paEl.innerHTML = weekPAs.length
-    ? weekPAs.map(p=>`
+  if(!weekPAs.length) {
+    paEl.innerHTML = '<div class="empty">이번 주 수행평가 없음</div>';
+  } else {
+    const shown = weekPAs.slice(0, 3);
+    const rest  = weekPAs.length - 3;
+    paEl.innerHTML = shown.map(p=>`
       <div class="ev-row" onclick="openEditPAModal('${p.id}')">
         <span class="ev-dot" style="background:var(--purple)"></span>
         <div><div class="ev-title"><strong style="color:var(--purple)">${p.subject}</strong> ${p.classes?'· '+p.classes:''}</div>
           <div class="ev-cat">${p.date} ${p.period?p.period+'교시 · ':''} ${p.teacher?'👤'+p.teacher:''}</div>
         </div>
       </div>`).join('')
-    : '<div class="empty">이번 주 수행평가 없음</div>';
+    + (rest > 0 ? `<div class="ev-row" onclick="switchTab('pa')" style="cursor:pointer;justify-content:center;color:var(--purple);font-size:13px;font-weight:700;padding:8px 0;border-top:1px dashed #e9d5ff;margin-top:4px;">📋 +${rest}건 더보기 →</div>` : '');
+  }
 
   // 부서별 업무 (주간업무 중 오늘 요일에 해당하는 것)
   const hlEl = document.getElementById('todayHighlights');
@@ -3689,9 +3707,11 @@ window.saveNeisConfig = async function() {
 
   neisConfig = { apiKey, atptCode, schulCode, schulName };
   localStorage.setItem('neis_config', JSON.stringify(neisConfig));
+  // Firebase에도 공유 저장 → 다른 기기에서도 자동으로 급식 확인 가능
+  if(db) { try { await set(ref(db, 'config/neis'), neisConfig); } catch(e) {} }
   mealCache = {};
   const sb = document.getElementById('neisStatusBox');
-  if(sb) sb.innerHTML = '<span style="color:#059669;font-size:12px;font-weight:700;">✅ 저장 완료! 급식 정보를 다시 불러옵니다.</span>';
+  if(sb) sb.innerHTML = '<span style="color:#059669;font-size:12px;font-weight:700;">✅ 저장 완료! 급식 정보를 다시 불러옵니다. (다른 기기에도 자동 적용됩니다)</span>';
   await window.fetchMeal(true);
 };
 
