@@ -1690,8 +1690,8 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v4.3.1';
-const APP_DATE    = '2026-09-21';
+const APP_VERSION = 'v4.4';
+const APP_DATE    = '2026-09-22';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
   if(vEl) vEl.textContent = APP_VERSION;
@@ -1711,6 +1711,16 @@ const DEFAULT_FB_CONFIG = {
   messagingSenderId: '559314404208',
   appId:             '1:559314404208:web:43fb7b8fdde86f580345b5',
   measurementId:     'G-PLFJ4M33X8'
+};
+
+// NEIS 급식 기본 학교 정보 (파일에 내장 → 모든 기기가 접속 즉시 급식 표시)
+// ※ 학교 코드는 NEIS 공개 정보이며 인증키 없이 조회됩니다. 비밀정보 아님.
+// ※ 학교가 바뀌면 아래 두 줄만 수정하거나, 설정 탭에서 학교를 새로 등록하세요.
+const DEFAULT_NEIS_CONFIG = {
+  apiKey:    '',          // 비워두면 인증키 없이 조회 (정상 동작 확인됨)
+  atptCode:  'I10',       // 세종특별자치시교육청
+  schulCode: '9300116',   // 아름중학교
+  schulName: '아름중학교'
 };
 
 // ══════════════════════════════════════════════════════
@@ -1852,15 +1862,15 @@ function startListeners() {
   const neisConfigRef = ref(db, 'config/neis');
   onValue(neisConfigRef, snap => {
     const fbCfg = snap.val();
-    if(fbCfg && fbCfg.atptCode && fbCfg.schulCode) {
-      // Firebase에 설정 있음 → 로컬 설정이 없는 기기에 자동 적용
-      if(!neisConfig.atptCode) {
+    // 관리자가 설정 탭에서 학교를 바꾼 경우에만 내장 기본값을 대체
+    // (이 기기에서 직접 저장한 설정이 있으면 그것이 최우선)
+    if(fbCfg && fbCfg.atptCode && fbCfg.schulCode && neisConfigSource !== 'local') {
+      if(fbCfg.schulCode !== neisConfig.schulCode || fbCfg.apiKey !== neisConfig.apiKey) {
         neisConfig = fbCfg;
+        neisConfigSource = 'firebase';
+        mealCache = {};
         if(activeTab === 'today') renderMealSection();
       }
-    } else if(neisConfig.atptCode && neisConfig.schulCode) {
-      // 로컬에 설정 있는데 Firebase에 없음 → 자동으로 Firebase에 업로드 (메인 PC)
-      set(ref(db, 'config/neis'), neisConfig).catch(()=>{});
     }
   });
 
@@ -3660,14 +3670,22 @@ document.querySelectorAll('.overlay').forEach(el=>
 // NEIS 급식 API
 // ══════════════════════════════════════════════════════
 let neisConfig = {};
+let neisConfigSource = 'default'; // 'local'(기기 저장) | 'firebase'(관리자 설정) | 'default'(파일 내장)
 let mealCache  = {};
 let _schoolRows = []; // 학교 검색 결과 임시 저장
 
+// 우선순위: 이 기기에서 직접 저장한 설정 > 파일 내장 기본 학교
 function loadNeisConfig() {
   try {
     const raw = localStorage.getItem('neis_config');
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
+    const saved = raw ? JSON.parse(raw) : null;
+    if(saved && saved.atptCode && saved.schulCode) {
+      neisConfigSource = 'local';
+      return saved;
+    }
+  } catch {}
+  neisConfigSource = 'default';
+  return { ...DEFAULT_NEIS_CONFIG };
 }
 
 function loadNeisFbForm() {
@@ -3821,8 +3839,8 @@ function renderMealSection() {
     _mealAutoPushing = true;
     el.innerHTML = '<div class="meal-loading">🔄 급식 자동 불러오는 중…</div>';
     window.fetchMeal(true).finally(() => { _mealAutoPushing = false; });
-    // 백그라운드에서 Firebase에도 캐시 저장 (실패해도 급식 표시에 영향 없음)
-    if(db) window.pushMealToFirebase(true).catch(()=>{});
+    // 로그인한 기기만 Firebase에 캐시 저장 (실패해도 급식 표시에는 영향 없음)
+    if(db && currentUser) window.pushMealToFirebase(true).catch(()=>{});
   } else if(_mealAutoPushing) {
     el.innerHTML = '<div class="meal-loading">🔄 급식 자동 불러오는 중…</div>';
   } else {
@@ -3847,11 +3865,11 @@ window.pushMealToFirebase = async function(silent = false) {
   if(btn) { btn.disabled = true; btn.textContent = '⏳ NEIS에서 불러오는 중…'; }
   if(sb)  sb.innerHTML = '';
   try {
-    const apiKey   = neisConfig.apiKey || 'demo';
+    const apiKey   = (neisConfig.apiKey || '').trim();
     const yyyymmdd = todayStr.replace(/-/g,'');
     const url = 'https://open.neis.go.kr/hub/mealServiceDietInfo'
-              + '?KEY=' + encodeURIComponent(apiKey)
-              + '&Type=json'
+              + '?Type=json'
+              + (apiKey ? '&KEY=' + encodeURIComponent(apiKey) : '')
               + '&ATPT_OFCDC_SC_CODE=' + neisConfig.atptCode
               + '&SD_SCHUL_CODE='      + neisConfig.schulCode
               + '&MLSV_YMD='           + yyyymmdd;
@@ -3920,8 +3938,10 @@ window.fetchMeal = async function(force = false) {
   if(!force && mealCache[yyyymmdd]) { renderMeal(mealCache[yyyymmdd]); return; }
   renderMeal(null,'loading');
   try {
-    const key = neisConfig.apiKey || 'demo';
-    const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?KEY=${key}&Type=json`
+    // 인증키가 없으면 KEY 파라미터를 생략 (NEIS는 키 없이도 조회 가능)
+    const key = (neisConfig.apiKey || '').trim();
+    const url = 'https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json'
+              + (key ? `&KEY=${encodeURIComponent(key)}` : '')
               + `&ATPT_OFCDC_SC_CODE=${neisConfig.atptCode}`
               + `&SD_SCHUL_CODE=${neisConfig.schulCode}`
               + `&MLSV_YMD=${yyyymmdd}`;
