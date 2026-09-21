@@ -1690,8 +1690,8 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v4.3';
-const APP_DATE    = '2026-09-14';
+const APP_VERSION = 'v4.3.1';
+const APP_DATE    = '2026-09-21';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
   if(vEl) vEl.textContent = APP_VERSION;
@@ -1853,11 +1853,14 @@ function startListeners() {
   onValue(neisConfigRef, snap => {
     const fbCfg = snap.val();
     if(fbCfg && fbCfg.atptCode && fbCfg.schulCode) {
-      // 로컬에 설정이 없으면 Firebase 설정으로 대체
+      // Firebase에 설정 있음 → 로컬 설정이 없는 기기에 자동 적용
       if(!neisConfig.atptCode) {
         neisConfig = fbCfg;
         if(activeTab === 'today') renderMealSection();
       }
+    } else if(neisConfig.atptCode && neisConfig.schulCode) {
+      // 로컬에 설정 있는데 Firebase에 없음 → 자동으로 Firebase에 업로드 (메인 PC)
+      set(ref(db, 'config/neis'), neisConfig).catch(()=>{});
     }
   });
 
@@ -3814,17 +3817,19 @@ function renderMealSection() {
         ${reg ? `<div style="font-size:10px;color:#9ca3af;text-align:right;margin-top:4px;">자동 등록 ${reg}</div>` : ''}
       </div>`;
   } else if(neisConfig.atptCode && neisConfig.schulCode && !_mealAutoPushing) {
-    // NEIS 설정 완료 + Firebase 미등록 → 자동 push
+    // NEIS 설정 완료 + Firebase 미등록 → NEIS에서 직접 불러와 표시 (로그인 불필요)
     _mealAutoPushing = true;
     el.innerHTML = '<div class="meal-loading">🔄 급식 자동 불러오는 중…</div>';
-    window.pushMealToFirebase(true).finally(() => { _mealAutoPushing = false; });
+    window.fetchMeal(true).finally(() => { _mealAutoPushing = false; });
+    // 백그라운드에서 Firebase에도 캐시 저장 (실패해도 급식 표시에 영향 없음)
+    if(db) window.pushMealToFirebase(true).catch(()=>{});
   } else if(_mealAutoPushing) {
     el.innerHTML = '<div class="meal-loading">🔄 급식 자동 불러오는 중…</div>';
   } else {
     // NEIS 미설정 → 안내 메시지
     el.innerHTML = `<div class="meal-error">
-      🍱 오늘 급식이 아직 등록되지 않았습니다.<br>
-      <strong>⚙️ Firebase 설정</strong> 탭 → <strong>🍱 오늘 급식 일괄 등록</strong> 버튼을 눌러주세요.
+      🍱 급식 정보를 자동으로 불러오려면 한 번만 설정하면 됩니다.<br>
+      <strong>⚙️ Firebase 설정</strong> 탭 → <strong>🍱 NEIS 급식 API 설정</strong>에서 학교를 등록하세요. (등록 후 모든 기기에 자동 적용)
     </div>`;
   }
 }
