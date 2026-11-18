@@ -96,7 +96,7 @@
   <div style="font-size:36px;margin-bottom:10px;">🏫</div>
   <h1>아름중학교 종합 대시보드</h1>
   <p>선생님들을 위한 친절한 사용설명서<br>컴퓨터에 익숙하지 않으셔도 괜찮아요!</p>
-  <span class="version">PA v4.4 · 2026-09-22</span>
+  <span class="version">PA v4.6.1 · 2026-11-18</span>
 </div>
 
 <div class="toc">
@@ -113,7 +113,7 @@
       </a>
       <a class="toc-item" href="#dept-head">
         <div class="toc-icon" style="background:#fef3c7;">📝</div>
-        <div><div class="toc-label">부장 선생님 가이드</div><div class="toc-sub">부서별 업무 입력</div></div>
+        <div><div class="toc-label">부서별 업무 입력</div><div class="toc-sub">요일별 업무 · 교시 · 시간</div></div>
       </a>
       <a class="toc-item" href="#monthly">
         <div class="toc-icon" style="background:#ede9fe;">📅</div>
@@ -121,11 +121,11 @@
       </a>
       <a class="toc-item" href="#teacher">
         <div class="toc-icon" style="background:#fce7f3;">✏️</div>
-        <div><div class="toc-label">선생님 가이드</div><div class="toc-sub">수행평가 입력</div></div>
+        <div><div class="toc-label">수행평가 입력</div><div class="toc-sub">교과별 계획 · 학급별 확인</div></div>
       </a>
       <a class="toc-item" href="#admin">
         <div class="toc-icon" style="background:#ecfdf5;">🗂️</div>
-        <div><div class="toc-label">업무담당 가이드</div><div class="toc-sub">교감 일정 확인 · 복무 기록</div></div>
+        <div><div class="toc-label">관리자 복무 기록</div><div class="toc-sub">출장 · 연가 입력과 확인</div></div>
       </a>
       <a class="toc-item" href="#vp">
         <div class="toc-icon" style="background:#fef9c3;">🐼</div>
@@ -166,16 +166,16 @@
         <div class="step-title">구글 계정으로 로그인하세요</div>
         <div class="step-desc">
           화면 오른쪽 위에 있는 <strong>🔐 Google 로그인</strong> 버튼을 클릭하세요.<br>
-          아름중학교 계정(<code>@areum.sjedums.kr</code>)으로 로그인해야 사용할 수 있어요.
+          학교 계정(<code>@areum.sjedums.kr</code>)과 개인 구글 계정(<code>@gmail.com</code>) <strong>모두 사용할 수 있습니다.</strong>
         </div>
-        <div class="warn">⚠️ 개인 구글 계정(@gmail.com)으로는 로그인되지 않습니다. 반드시 학교 계정을 사용하세요.</div>
+        <div class="tip">💡 평소 쓰시는 구글 계정으로 그냥 로그인하시면 됩니다. 계정 종류에 따라 기능 차이는 없어요.</div>
       </div>
     </div>
     <div class="step">
       <div class="step-num" style="background:var(--primary);">3</div>
       <div class="step-body">
         <div class="step-title">대시보드가 열리면 준비 완료!</div>
-        <div class="step-desc">로그인하면 오늘 날짜 기준으로 달력과 일정이 자동으로 표시됩니다.<br>본인의 역할에 맞는 탭을 눌러서 사용하시면 됩니다.</div>
+        <div class="step-desc">로그인하면 오늘 날짜 기준으로 달력과 일정이 자동으로 표시됩니다.<br>필요한 탭을 눌러서 사용하시면 됩니다.</div>
       </div>
     </div>
   </div>
@@ -186,23 +186,7 @@
   <div class="section-badge" style="background:#dcfce7;color:#166534;">📊 화면 구성</div>
   <h2>화면이 어떻게 생겼나요?</h2>
   <p class="section-desc">대시보드는 여러 탭으로 나뉘어 있어요. 탭을 클릭해서 이동하세요.</p>
-  <div class="user-types">
-    <div class="user-card" style="background:#fef3c7;border:1px solid #fde68a;">
-      <div class="icon">👨‍💼</div>
-      <div class="name">부장 선생님</div>
-      <div class="role">부서별 업무 입력</div>
-    </div>
-    <div class="user-card" style="background:#ede9fe;border:1px solid #ddd6fe;">
-      <div class="icon">👩‍🏫</div>
-      <div class="name">일반 선생님</div>
-      <div class="role">수행평가 입력</div>
-    </div>
-    <div class="user-card" style="background:#ecfdf5;border:1px solid #a7f3d0;">
-      <div class="icon">🗂️</div>
-      <div class="name">업무 담당</div>
-      <div class="role">교감 일정 확인 · 복무</div>
-    </div>
-  </div>
+  <div class="tip">💡 모든 선생님이 같은 화면을 보고 같은 기능을 쓸 수 있습니다. 담당하신 업무에 해당하는 탭을 열어 사용하세요.</div>
   <div class="tab-guide">
     <div class="tab-card">
       <div class="tab-icon">🏠</div>
@@ -212,17 +196,19 @@
     <div class="tab-card">
       <div class="tab-icon">📅</div>
       <div class="tab-name">월중계획 탭</div>
-      <div class="tab-desc">한 달 달력 형태로 학교 행사와 일정을 봅니다. 교감 일정도 여기서 입력해요.</div>
+      <div class="tab-desc">한 달 달력 형태로 학교 행사와 일정을 봅니다. 교감 일정도 여기서 입력해요.<br>
+      날짜를 클릭하면 그날의 <strong>부서별 업무가 부서 이름과 함께 자동 표시</strong>되고, 클릭하면 바로 수정할 수 있어요.</div>
     </div>
     <div class="tab-card">
       <div class="tab-icon">📋</div>
       <div class="tab-name">부서별 업무 탭</div>
-      <div class="tab-desc">이번 주 각 부서의 업무를 요일별로 입력하는 곳이에요. (부장 선생님 전용)</div>
+      <div class="tab-desc">이번 주 각 부서의 업무를 요일별로 입력하는 곳이에요.<br>
+      <strong>월중계획에 부서를 지정해 입력한 일정은 이 탭에 파란 글씨(▶)로 자동 표시</strong>되므로 같은 내용을 두 번 입력하지 않아도 됩니다.</div>
     </div>
     <div class="tab-card">
       <div class="tab-icon">✏️</div>
       <div class="tab-name">수행평가 탭</div>
-      <div class="tab-desc">교과별 수행평가 계획을 입력하고, 학급별로 확인해요. (선생님 전용)</div>
+      <div class="tab-desc">교과별 수행평가 계획을 입력하고, 학급별로 확인해요.</div>
     </div>
     <div class="tab-card">
       <div class="tab-icon">📁</div>
@@ -232,14 +218,14 @@
     <div class="tab-card">
       <div class="tab-icon">📥</div>
       <div class="tab-name">엑셀 다운로드</div>
-      <div class="tab-desc">월중계획과 부서별 업무를 엑셀 파일로 다운받아 보관할 수 있어요.</div>
+      <div class="tab-desc">월중계획과 부서별 업무가 <strong>하나의 표로 통합</strong>되어 엑셀로 저장됩니다. 날짜 한 줄에 학교 행사·전 부서 업무·관리자 복무가 모두 모여 한눈에 볼 수 있어요.</div>
     </div>
   </div>
 </div>
 
-<!-- ③ 부장 선생님 -->
+<!-- ③ 부서별 업무 -->
 <div class="section" id="dept-head">
-  <div class="section-badge" style="background:#fef3c7;color:#92400e;">👨‍💼 부장 선생님</div>
+  <div class="section-badge" style="background:#fef3c7;color:#92400e;">📝 부서별 업무</div>
   <h2>부서별 업무 입력하기</h2>
   <p class="section-desc">매주 우리 부서의 업무를 요일별로 입력해 주세요. 입력한 내용은 달력에도 표시됩니다.</p>
   <div class="steps">
@@ -382,12 +368,12 @@
       <div style="margin-top:8px;font-size:10px;color:#78350f;background:#fef3c7;border-radius:4px;padding:4px 8px;">↑ 갈색 🐼 표시 = 교감 선생님 관련 일정</div>
     </div>
   </div>
-  <div class="info">📌 업무담당 선생님들은 갈색 🐼 표시가 있는 일정을 확인하여 교감 선생님의 일정을 파악하고 관련 업무를 준비할 수 있습니다.</div>
+  <div class="info">📌 갈색 🐼 표시가 있는 일정을 보면 교감 선생님의 일정을 파악해 관련 업무를 미리 준비할 수 있습니다.</div>
 </div>
 
-<!-- ⑥ 일반 선생님 -->
+<!-- ⑥ 수행평가 -->
 <div class="section" id="teacher">
-  <div class="section-badge" style="background:#fce7f3;color:#9d174d;">✏️ 일반 선생님</div>
+  <div class="section-badge" style="background:#fce7f3;color:#9d174d;">✏️ 수행평가</div>
   <h2>수행평가 입력하기</h2>
   <p class="section-desc">담당 교과의 수행평가 계획을 입력해 주세요.</p>
   <div class="steps">
@@ -425,9 +411,9 @@
   <div class="warn">⚠️ 수행평가는 엑셀 인쇄물에 포함되지 않습니다. 달력과 대시보드에서만 확인 가능해요.</div>
 </div>
 
-<!-- ⑦ 업무담당 -->
+<!-- ⑦ 관리자 복무 -->
 <div class="section" id="admin">
-  <div class="section-badge" style="background:#ecfdf5;color:#065f46;">🗂️ 업무담당 선생님</div>
+  <div class="section-badge" style="background:#ecfdf5;color:#065f46;">🗂️ 관리자 복무</div>
   <h2>관리자 복무 기록 · 교감 일정 확인</h2>
   <p class="section-desc">교장·교감 선생님의 출장, 연수, 외출 등을 기록하고 달력에서 일정을 확인하세요.</p>
   <div class="steps">
@@ -463,7 +449,8 @@
         <div class="step-title">엑셀로 다운로드하여 보관하세요</div>
         <div class="step-desc">
           홈 화면 또는 월중계획 탭에서 <strong>[📥 엑셀 다운로드]</strong> 버튼을 클릭하면<br>
-          월중계획과 부서별 업무가 엑셀 파일로 저장됩니다.
+          <strong>업무계획(통합)</strong> 시트에 날짜별로 학교 행사·부서별 업무·관리자 복무가 한 줄로 정리되어 저장됩니다.<br>
+          월 단위로 훑어볼 수 있는 <strong>월중계획</strong> 시트도 함께 들어 있습니다.
         </div>
       </div>
     </div>
@@ -478,7 +465,7 @@
 
   <div class="faq-item">
     <div class="faq-q">Q. 로그인이 안 돼요 🔐</div>
-    <div class="faq-a">반드시 학교 계정(<strong>@areum.sjedums.kr</strong>)으로 로그인해야 합니다. 개인 Gmail(@gmail.com)은 접속이 차단되어 있습니다. 계정 문제는 교감 선생님께 문의하세요.</div>
+    <div class="faq-a">학교 계정(@areum.sjedums.kr)과 개인 구글 계정(@gmail.com) 모두 사용할 수 있습니다. 로그인 창이 열리지 않으면 브라우저의 팝업 차단을 해제해 보시고, 그래도 안 되면 교감 선생님께 문의하세요.</div>
   </div>
 
   <div class="faq-item">
@@ -507,7 +494,7 @@
 
   <div class="faq-item">
     <div class="faq-q">Q. 교감 포함 체크박스는 언제 사용하나요? 🐼</div>
-    <div class="faq-a">월중계획에서 일정을 추가할 때, 교감 선생님이 참석하거나 관련된 일정이라면 <strong>"🐼 교감 관련 일정"</strong> 체크박스에 체크해주세요. 달력에서 갈색으로 표시되어 업무담당 선생님들이 쉽게 확인할 수 있습니다.</div>
+    <div class="faq-a">월중계획에서 일정을 추가할 때, 교감 선생님이 참석하거나 관련된 일정이라면 <strong>"🐼 교감 관련 일정"</strong> 체크박스에 체크해주세요. 달력에서 갈색으로 표시되어 누구나 쉽게 확인할 수 있습니다.</div>
   </div>
 
   <div class="faq-item">
@@ -538,8 +525,8 @@
 </div>
 
 <footer>
-  아름중학교 종합 대시보드 사용설명서 · PA v4.4 · 2026-09-22<br>
-  문의사항은 교감 선생님 또는 업무담당 선생님께 말씀해 주세요.
+  아름중학교 종합 대시보드 사용설명서 · PA v4.6.1 · 2026-11-18<br>
+  문의사항은 교감 선생님께 말씀해 주세요.
 </footer>
 
 </body>
