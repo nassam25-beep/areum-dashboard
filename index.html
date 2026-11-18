@@ -159,6 +159,10 @@ textarea{resize:vertical;}
 .wk-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
 .wk-table tr:hover td{background:#f0f9ff;}
 .wk-dept{font-weight:700;font-size:12px;width:10%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* 월중계획에서 자동 연동된 일정 (읽기 전용 표시) */
+.wk-linked{font-size:10px;line-height:1.35;color:#1d4ed8;background:#eff6ff;border-left:2px solid #60a5fa;
+  border-radius:3px;padding:1px 4px;margin-top:2px;white-space:normal;word-break:break-word;}
+.wk-linked-t{color:#64748b;font-weight:700;}
 .wk-task{color:#374151;}
 .wk-done{text-decoration:line-through;opacity:.5;}
 .wk-chk{color:var(--green);font-size:11px;}
@@ -1134,10 +1138,14 @@ textarea{resize:vertical;}
     <div class="modal-ttl" id="evModalTitle">+ 일정 추가</div>
     <input type="hidden" id="evEditId">
     <div class="g2">
-      <div class="form-row"><label>시작일 *</label><input type="date" id="evDate"/></div>
+      <div class="form-row"><label>시작일 *</label><input type="date" id="evDate" onchange="syncEndDate('evDate','evEndDate')"/></div>
       <div class="form-row"><label>종료일</label><input type="date" id="evEndDate"/></div>
     </div>
     <div class="form-row"><label>행사명 *</label><input id="evTitle" placeholder="행사·일정 이름"/></div>
+    <div class="form-row">
+      <label>시간 (선택)</label>
+      <input id="evTime" placeholder="예: 14:00~15:00 · 오후 · 방과후 (교시 대신 또는 함께 입력)"/>
+    </div>
     <div class="form-row">
       <label>교시</label>
       <div class="day-checks">
@@ -1223,13 +1231,13 @@ textarea{resize:vertical;}
     </div>
     <!-- 언제 (일자) -->
     <div class="g2">
-      <div class="form-row"><label>시작일</label><input type="date" id="dutyStartDate"/></div>
+      <div class="form-row"><label>시작일</label><input type="date" id="dutyStartDate" onchange="syncEndDate('dutyStartDate','dutyEndDate')"/></div>
       <div class="form-row"><label>종료일</label><input type="date" id="dutyEndDate"/></div>
     </div>
     <!-- 몇시에 -->
     <div class="g2">
-      <div class="form-row"><label>시작시간</label><input id="dutyFrom" placeholder="09:00"/></div>
-      <div class="form-row"><label>종료시간</label><input id="dutyTo" placeholder="18:00"/></div>
+      <div class="form-row"><label>시작시간</label><input id="dutyFrom" placeholder="08:30"/></div>
+      <div class="form-row"><label>종료시간</label><input id="dutyTo" placeholder="16:30"/></div>
     </div>
     <!-- 어디를 -->
     <div class="form-row"><label>장소</label><input id="dutyPlace" placeholder="출장지·장소 입력"/></div>
@@ -1348,6 +1356,10 @@ textarea{resize:vertical;}
         <label class="day-check-lbl"><input type="checkbox" class="wkPeriodCheck" value="6"> 6교시</label>
         <label class="day-check-lbl"><input type="checkbox" class="wkPeriodCheck" value="7"> 7교시</label>
       </div>
+    </div>
+    <div class="form-row">
+      <label>시간 (선택)</label>
+      <input id="wkCellTime" placeholder="예: 14:00~15:00 · 오후 · 방과후 (교시 대신 또는 함께 입력)"/>
     </div>
     <div class="form-row">
       <label>업무 내용</label>
@@ -1690,8 +1702,8 @@ function fmtDateFull(ds){
 // ══════════════════════════════════════════════════════
 // 버전 정보
 // ══════════════════════════════════════════════════════
-const APP_VERSION = 'v4.4';
-const APP_DATE    = '2026-09-22';
+const APP_VERSION = 'v4.6.1';
+const APP_DATE    = '2026-11-18';
 document.addEventListener('DOMContentLoaded', () => {
   const vEl = document.getElementById('appVersion');
   if(vEl) vEl.textContent = APP_VERSION;
@@ -2081,7 +2093,10 @@ function renderToday() {
   const hlEl = document.getElementById('todayHighlights');
   const todayWk = getWeeklyForDate(todayStr);
   hlEl.innerHTML = todayWk.length
-    ? todayWk.map(({dept,task})=>`<div class="hl-item"><strong style="color:${deptColor(dept)}">${dept}</strong> · ${task}</div>`).join('')
+    ? todayWk.map(({dept,task,period,time})=>{
+        const pt = ptText(period, time);
+        return `<div class="hl-item"><strong style="color:${deptColor(dept)}">${dept}</strong> · ${task}${pt?` <span style="color:var(--text-muted);font-size:11px;">🕒${pt}</span>`:''}</div>`;
+      }).join('')
     : '<div class="empty">이번 주 업무 없음 (부서별 업무 입력 필요)</div>';
 
   // 급식 (Firebase 데이터 우선)
@@ -2145,7 +2160,8 @@ function renderCalendar() {
         ? (isStart ? 'cal-bar-start' : isEnd ? 'cal-bar-end' : 'cal-bar-mid')
         : 'cal-bar-single';
       const col = e.isVP ? '#b45309' : typeHex(e.type);
-      const timeStr = (showLabel && e.period) ? `<span class="cal-bar-time">${e.period}교시</span>` : '';
+      const _pt = ptText(e.period, e.time);
+      const timeStr = (showLabel && _pt) ? `<span class="cal-bar-time">${_pt}</span>` : '';
       const vpTag = (e.isVP && showLabel) ? '<span style="font-size:9px;opacity:.9;margin-right:2px;">🐼</span>' : '';
       const label = showLabel ? e.title : '';
       bars += `<span class="cal-bar ${barCls}" style="background:${col};"
@@ -2210,6 +2226,40 @@ function renderCalendar() {
   grid.innerHTML += cells;
 }
 
+// 월중계획 상세에서 부서별 업무 클릭 → 해당 주차의 부서별 업무 탭으로 이동
+window.goWeeklyTab = function(ds, dept) {
+  viewWeekKey = getSundayKey(ds);
+  switchTab('weekly');
+  setTimeout(() => {
+    const DOW = ['일','월','화','수','목','금','토'];
+    const dow = DOW[new Date(ds+'T00:00:00').getDay()];
+    if(dow !== '일') openWkCellModal(dept, dow);
+  }, 120);
+};
+
+// 시작일을 고르면 종료일을 같은 날로 맞춤 (비어있거나 시작일보다 빠를 때만)
+window.syncEndDate = function(startId, endId) {
+  const s = document.getElementById(startId);
+  const e = document.getElementById(endId);
+  if(!s || !e || !s.value) return;
+  if(!e.value || e.value < s.value) e.value = s.value;
+};
+
+// 교시 + 자유입력 시간을 하나의 라벨로 (예: "3교시", "14:00~15:00", "3교시 14:00")
+function ptText(period, time) {
+  const p = (period || '').toString().trim();
+  const t = (time   || '').toString().trim();
+  const parts = [];
+  if(p) parts.push(p + '교시');
+  if(t) parts.push(t);
+  return parts.join(' ');
+}
+// 대괄호 감싼 접두 라벨 (예: "[3교시] ")
+function ptPrefix(period, time) {
+  const s = ptText(period, time);
+  return s ? `[${s}] ` : '';
+}
+
 let selectedCalDate = null;
 
 window.showDay = function(ds) {
@@ -2266,10 +2316,14 @@ window.showDay = function(ds) {
   }
   if(dayWk.length){
     html+=sec('📋',`부서별 업무 (${dow}요일)`,'var(--primary)');
-    html+=dayWk.map(({dept,task})=>`<div class="ev-row">
+    html+=dayWk.map(({dept,task,period,time})=>{
+      const pt = ptText(period, time);
+      return `<div class="ev-row" onclick="goWeeklyTab('${ds}','${dept}')" style="cursor:pointer;">
       <span class="ev-dot" style="background:${deptColor(dept)}"></span>
-      <div><div class="ev-title"><strong style="color:${deptColor(dept)}">${dept}</strong> · ${task}</div></div>
-    </div>`).join('');
+      <div><div class="ev-title"><strong style="color:${deptColor(dept)}">${dept}</strong> · ${task}</div>
+        ${pt?`<div class="ev-cat">🕒 ${pt}</div>`:''}
+      </div>
+    </div>`;}).join('');
   }
   el.innerHTML=html;
 };
@@ -2326,7 +2380,7 @@ function getWeeklyForDate(ds) {
   const weekData = allWeeklyData[sunKey] || {};
   return Object.entries(weekData)
     .filter(([,v]) => v[dow])
-    .map(([dept,v]) => ({dept, task: v[dow]}));
+    .map(([dept,v]) => ({dept, task: v[dow], period: v['period_'+dow]||'', time: v['time_'+dow]||''}));
 }
 
 function renderWeekly() {
@@ -2362,13 +2416,26 @@ function renderWeekly() {
     // 부서 행
     const deptRows = ALL_DEPTS.map(dept => {
       const e = data[dept] || {};
-      const tds = DAYS.map(d => {
+      const tds = DAYS.map((d, di) => {
         const val = e[d] || '';
         const period = e['period_'+d] || '';
-        const displayText = (period ? `[${period}교시] ` : '') + val;
-        const cls = val ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
-        const safeTip = displayText.replace(/"/g,'&quot;');
-        return `<td class="${cls}" ondblclick="openWkCellModal('${dept}','${d}')" title="${safeTip}">${displayText}</td>`;
+        const own = val ? ptPrefix(period, e['time_'+d]) + val : '';
+
+        // ── 월중계획 자동 연동: 이 부서 · 이 날짜의 행사 (수행평가 제외) ──
+        const ds = weekDates[di];
+        const linked = Object.values(allEvents).filter(ev =>
+          ev.dept === dept && ev.start <= ds && (ev.end||ev.start) >= ds &&
+          !(ev.title||'').includes('수행평가')
+        );
+        const linkedHtml = linked.map(ev => {
+          const pt = ptText(ev.period, ev.time);
+          return `<div class="wk-linked" title="월중계획에서 입력된 일정입니다">▶${ev.isVP?'🐼':''}${ev.title}${pt?` <span class="wk-linked-t">${pt}</span>`:''}</div>`;
+        }).join('');
+
+        const displayText = own;
+        const cls = (val || linked.length) ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
+        const safeTip = (own + (linked.length ? ' / 월중계획: ' + linked.map(ev=>ev.title).join(', ') : '')).replace(/"/g,'&quot;');
+        return `<td class="${cls}" ondblclick="openWkCellModal('${dept}','${d}')" title="${safeTip}">${displayText}${linkedHtml}</td>`;
       }).join('');
       const memoCls = e.비고 ? 'wk-task wk-cell wk-cell-filled' : 'wk-task wk-cell';
       const memoTip = (e.비고||'').replace(/"/g,'&quot;');
@@ -2452,20 +2519,38 @@ window.downloadWeeklyExcel = function() {
     cur.setDate(cur.getDate()+7);
   }
 
-  const NCOLS = 9; // 부서(1) + 월~토(6) + 비고(1) + [월중계획 포함열(1)]
-  const aoa    = [];
-  const merges = [];
+  // ── 공통 필터: 수행평가는 월중계획에서 제외 ──
+  const isPAEvent = ev => (ev.title||'').includes('수행평가');
+  // deptKey: '__none__' = 부서 미지정(학교 전체 행사), 그 외는 해당 부서명
+  const eventsOn = (ds, deptKey) => Object.values(allEvents).filter(ev =>
+    !isPAEvent(ev) && ev.start<=ds && (ev.end||ev.start)>=ds &&
+    (deptKey === '__none__' ? !ev.dept : ev.dept === deptKey)
+  );
+  const evText = ev => {
+    const pt = ptText(ev.period, ev.time);
+    return (ev.isVP ? '🐼' : '') + (ev.title||'')
+         + (pt ? ' ['+pt+']' : '')
+         + (ev.place ? ' ('+ev.place+')' : '');
+  };
+
+  // ── Sheet 1 구조: 날짜 1행에 학교행사 + 전부서 업무 + 관리자복무 통합 ──
+  const HEAD    = ['날짜', '학교 행사(월중계획)', ...ALL_DEPTS, '관리자 복무'];
+  const NCOLS   = HEAD.length;
+  const aoa     = [];
+  const merges  = [];
   const rowMeta = []; // {height, bold} per row
 
   weekKeys.forEach((wk, wkIdx) => {
     const sun = new Date(wk + 'T00:00:00');
-    // 월~토 날짜 문자열
+    // 월~토 중 조회 기간에 포함된 날짜만
     const weekDates = [1,2,3,4,5,6].map(i => {
       const dt = new Date(sun); dt.setDate(sun.getDate()+i);
       return `${dt.getFullYear()}-${S2(dt.getMonth()+1)}-${S2(dt.getDate())}`;
-    });
-    const mon = new Date(sun); mon.setDate(sun.getDate()+1);
-    const sat = new Date(sun); sat.setDate(sun.getDate()+6);
+    }).filter(ds => ds >= fromDate && ds <= toDate);
+    if(!weekDates.length) return; // 기간에 걸치지 않는 주는 건너뜀
+
+    const mon = new Date(weekDates[0] + 'T00:00:00');
+    const sat = new Date(weekDates[weekDates.length-1] + 'T00:00:00');
     const weekNum = Math.ceil(mon.getDate()/7);
 
     // ── 주차 라벨 (병합) ──
@@ -2475,58 +2560,54 @@ window.downloadWeeklyExcel = function() {
     rowMeta.push({hpt:18, bold:true});
 
     // ── 헤더 행 ──
-    const hdr = ['부서'];
-    weekDates.forEach(ds => {
-      const dt = new Date(ds+'T00:00:00');
-      hdr.push(`${dt.getMonth()+1}/${dt.getDate()}(${DOW_KR[dt.getDay()]})`);
-    });
-    hdr.push('비고');
-    aoa.push(hdr);
+    aoa.push([...HEAD]);
     rowMeta.push({hpt:16, bold:true});
 
-    // ── 부서 행 ──
     const data = allWeeklyData[wk] || {};
-    ALL_DEPTS.forEach(dept => {
-      const e = data[dept] || {};
-      const row = [dept];
-      weekDates.forEach(ds => {
-        const inRange = ds >= fromDate && ds <= toDate;
-        if(!inRange) { row.push(''); return; }
-        const dow = DOW_KR[new Date(ds+'T00:00:00').getDay()];
+
+    // ── 날짜별 통합 행 (1날짜 = 1줄) ──
+    weekDates.forEach(ds => {
+      const dt  = new Date(ds+'T00:00:00');
+      const dow = DOW_KR[dt.getDay()];
+      const row = [`${dt.getMonth()+1}/${dt.getDate()}(${dow})`];
+
+      // 학교 행사 = 부서 미지정 월중계획 (수행평가 제외)
+      row.push(eventsOn(ds, '__none__').map(evText).join(' / '));
+
+      // 부서별 = 주간 부서업무 + 해당 부서 월중계획
+      ALL_DEPTS.forEach(dept => {
+        const e      = data[dept] || {};
         const task   = e[dow] || '';
         const period = e['period_'+dow] || '';
-        const evTitles = Object.values(allEvents)
-          .filter(ev => ev.dept===dept && ev.start<=ds && (ev.end||ev.start)>=ds && !(ev.title||'').includes('수행평가'))
-          .map(ev => '▶'+ev.title).join(' ');
-        const parts = [];
-        if(task) parts.push((period?`[${period}교시] `:'')+task);
-        if(evTitles) parts.push(evTitles);
+        const parts  = [];
+        if(task) parts.push(ptPrefix(period, e['time_'+dow]) + task);
+        const dEvs = eventsOn(ds, dept).map(ev => '▶' + evText(ev));
+        if(dEvs.length) parts.push(dEvs.join(' '));
         row.push(parts.join(' | '));
       });
-      row.push(e.비고||'');
+
+      // 관리자 복무 (한 칸에 통합)
+      const dayDuties = dutiesOnDate(ds);
+      row.push(MGRS.map(mgr => {
+        const list = dayDuties.filter(r => r.person === mgr);
+        if(!list.length) return '';
+        return personLabel(mgr) + ': ' + list
+          .map(r => r.kind + (r.from ? ` ${r.from}${r.to?'~'+r.to:''}` : '') + (r.place ? ' '+r.place : ''))
+          .join(', ');
+      }).filter(Boolean).join(' / '));
+
       aoa.push(row);
       rowMeta.push({hpt:15});
     });
 
-    // ── 관리자 구분행 (병합) ──
-    const sepRow = aoa.length;
-    aoa.push(['▪ 관리자 복무', ...Array(NCOLS-1).fill('')]);
-    merges.push({s:{r:sepRow,c:0}, e:{r:sepRow,c:NCOLS-1}});
-    rowMeta.push({hpt:14, bold:true});
-
-    // ── 관리자 행 ──
-    MGRS.forEach(mgr => {
-      const row = [personLabel(mgr)];
-      weekDates.forEach(ds => {
-        const inRange = ds >= fromDate && ds <= toDate;
-        if(!inRange) { row.push(''); return; }
-        const duties = dutiesOnDate(ds).filter(r=>r.person===mgr);
-        row.push(duties.map(r=>r.kind+(r.from?` ${r.from}${r.to?'~'+r.to:''}`:'')+(r.place?' '+r.place:'')).join(' / '));
-      });
-      row.push('');
-      aoa.push(row);
-      rowMeta.push({hpt:14});
-    });
+    // ── 부서별 주간 비고 (내용 있을 때만) ──
+    const bgRow = ['비고', ''];
+    ALL_DEPTS.forEach(dept => bgRow.push((data[dept]||{}).비고 || ''));
+    bgRow.push('');
+    if(bgRow.slice(2).some(v => v)) {
+      aoa.push(bgRow);
+      rowMeta.push({hpt:15});
+    }
 
     // ── 주차 사이 빈 행 ──
     if(wkIdx < weekKeys.length - 1) {
@@ -2536,7 +2617,7 @@ window.downloadWeeklyExcel = function() {
   });
 
   // ── Sheet 2: 월중계획 (날짜 × 부서 매트릭스) ──
-  const s2Header  = ['날짜', ...ALL_DEPTS];
+  const s2Header  = ['날짜', '학교 행사', ...ALL_DEPTS];
   const s2rows    = [s2Header];
   const s2merges  = [];
   const s2rowMeta = [{hpt:16}];
@@ -2565,13 +2646,12 @@ window.downloadWeeklyExcel = function() {
       const dt  = new Date(ds+'T00:00:00');
       const row = [`${S2(m)}-${S2(d)}(${DOW_KR[dt.getDay()]})`];
 
-      // 부서별 월중계획 행사 (수행평가 제외)
+      // 학교 행사 (부서 미지정) — 수행평가 제외
+      row.push(eventsOn(ds, '__none__').map(evText).join(' / '));
+
+      // 부서별 월중계획 행사 — 수행평가 제외
       ALL_DEPTS.forEach(dept => {
-        const evs = Object.values(allEvents).filter(ev =>
-          ev.dept===dept && ev.start<=ds && (ev.end||ev.start)>=ds &&
-          !(ev.title||'').includes('수행평가')
-        );
-        row.push(evs.map(ev => ev.title+(ev.place?' ('+ev.place+')':'')).join(' / '));
+        row.push(eventsOn(ds, dept).map(evText).join(' / '));
       });
 
       s2rows.push(row);
@@ -2589,19 +2669,21 @@ window.downloadWeeklyExcel = function() {
   const wb  = XLSX.utils.book_new();
   const ws1 = XLSX.utils.aoa_to_sheet(aoa);
   ws1['!merges']    = merges;
-  ws1['!cols']      = [{wch:14},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:18}];
+  // 날짜 / 학교행사 / 부서들 / 관리자복무
+  ws1['!cols']      = [{wch:12},{wch:24}, ...ALL_DEPTS.map(()=>({wch:18})), {wch:28}];
   ws1['!rows']      = rowMeta.map(m=>({hpt:m.hpt||14}));
-  ws1['!pageSetup'] = {orientation:'landscape', fitToWidth:1, fitToHeight:0, fitToPage:true, scale:85};
+  ws1['!pageSetup'] = {orientation:'landscape', fitToWidth:1, fitToHeight:0, fitToPage:true, scale:60};
   ws1['!printOptions'] = {gridLines:true};
+  ws1['!freeze']    = {xSplit:1, ySplit:0};
 
   const ws2 = XLSX.utils.aoa_to_sheet(s2rows);
   ws2['!merges']    = s2merges;
-  ws2['!cols']      = [{wch:13}, ...Array(TOTAL_S2-1).fill({wch:14})];
+  ws2['!cols']      = [{wch:13}, {wch:22}, ...Array(TOTAL_S2-2).fill({wch:14})];
   ws2['!rows']      = s2rowMeta.map(m=>({hpt:m.hpt||14}));
   ws2['!pageSetup'] = {orientation:'landscape', fitToWidth:1, fitToHeight:0, fitToPage:true};
   ws2['!printOptions'] = {gridLines:true};
 
-  XLSX.utils.book_append_sheet(wb, ws1, '주간부서별업무');
+  XLSX.utils.book_append_sheet(wb, ws1, '업무계획(통합)');
   XLSX.utils.book_append_sheet(wb, ws2, '월중계획');
   XLSX.writeFile(wb, `아름중_업무계획_${fromDate}~${toDate}.xlsx`);
   closeModal('xlsxModal');
@@ -3000,7 +3082,7 @@ window.openAddEventForDate = function(ds) {
   document.getElementById('evModalTitle').textContent='+ 일정 추가';
   document.getElementById('evDate').value=ds;
   document.getElementById('evEndDate').value=ds;
-  ['evTitle','evDept','evPlace','evMemo'].forEach(id=>document.getElementById(id).value='');
+  ['evTitle','evDept','evPlace','evMemo','evTime'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   document.querySelectorAll('.evPeriodCheck').forEach(cb=>cb.checked=false);
   document.getElementById('evType').value='student';
   document.getElementById('evIsVP').checked=false;
@@ -3014,7 +3096,7 @@ window.openAddEventModal = function() {
   document.getElementById('evModalTitle').textContent='+ 일정 추가';
   document.getElementById('evDate').value=todayStr;
   document.getElementById('evEndDate').value=todayStr;
-  ['evTitle','evDept','evPlace','evMemo'].forEach(id=>document.getElementById(id).value='');
+  ['evTitle','evDept','evPlace','evMemo','evTime'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   document.querySelectorAll('.evPeriodCheck').forEach(cb=>cb.checked=false);
   document.getElementById('evType').value='student';
   document.getElementById('evIsVP').checked=false;
@@ -3035,6 +3117,7 @@ window.openEditEventModal = function(id) {
   document.getElementById('evType').value=ev.type||'student';
   const _gs=(ev.grade||'').split(',').map(s=>s.trim());
   ['evGrade1','evGrade2','evGrade3'].forEach(id=>{const el=document.getElementById(id);el.checked=_gs.includes(el.value);});
+  const _evt=document.getElementById('evTime'); if(_evt) _evt.value=ev.time||'';
   document.getElementById('evDept').value=ev.dept||'';
   document.getElementById('evPlace').value=ev.place||'';
   document.getElementById('evMemo').value=ev.memo||'';
@@ -3053,6 +3136,7 @@ window.saveEvent = async function() {
   const obj={
     start:date, end:endDate, title,
     period:[...document.querySelectorAll('.evPeriodCheck:checked')].map(cb=>cb.value).join(','),
+    time:(document.getElementById('evTime')?.value||'').trim(),
     type:document.getElementById('evType').value,
     grade:['evGrade1','evGrade2','evGrade3'].filter(id=>document.getElementById(id).checked).map(id=>document.getElementById(id).value).join(','),
     dept:document.getElementById('evDept').value.trim(),
@@ -3202,6 +3286,9 @@ window.openAddDutyModal = function() {
   document.getElementById('dutyPerson').value='교장';
   document.getElementById('dutyKind').value='출장';
   ['dutyReason','dutyFrom','dutyTo','dutyPlace','dutyDeputy'].forEach(id=>document.getElementById(id).value='');
+  // 기본 근무시간 자동 입력 (필요 없으면 지우고 저장하면 됩니다)
+  document.getElementById('dutyFrom').value = '08:30';
+  document.getElementById('dutyTo').value   = '16:30';
   document.getElementById('dutyDeleteBtn').style.display='none';
   openModal('addDutyModal');
 };
@@ -3557,6 +3644,9 @@ window.openWkCellModal = function(dept, day) {
   const _wp=(e['period_'+day]||'').split(',').map(s=>s.trim()).filter(Boolean);
   document.querySelectorAll('.wkPeriodCheck').forEach(cb=>cb.checked=_wp.includes(cb.value));
 
+  const _wt = document.getElementById('wkCellTime');
+  if(_wt) _wt.value = e['time_'+day] || '';
+
   document.getElementById('wkCellContent').value      = e[day] || '';
   document.getElementById('wkCellWeekInfo').textContent = `📅 ${fd(sun)} ~ ${fd(sat)}`;
   document.getElementById('wkCellDeleteBtn').style.display = e[day] ? 'block' : 'none';
@@ -3570,15 +3660,19 @@ window.saveWkCell = async function() {
   const checkedDays = [...document.querySelectorAll('.wkDayCheck:checked')].map(cb => cb.value);
   if(checkedDays.length === 0){alert('요일을 하나 이상 선택하세요.');return;}
   const checkedPeriods = [...document.querySelectorAll('.wkPeriodCheck:checked')].map(cb=>cb.value).join(',');
+  const timeVal = (document.getElementById('wkCellTime')?.value || '').trim();
   const existing = {...((allWeeklyData[viewWeekKey] || {})[dept]) || {}};
   checkedDays.forEach(d => {
     if(content) {
       existing[d] = content;
       if(checkedPeriods) existing['period_'+d] = checkedPeriods;
       else delete existing['period_'+d];
+      if(timeVal) existing['time_'+d] = timeVal;
+      else delete existing['time_'+d];
     } else {
       delete existing[d];
       delete existing['period_'+d];
+      delete existing['time_'+d];
     }
   });
   existing.updatedAt = Date.now();
@@ -3592,7 +3686,7 @@ window.deleteWkCell = async function() {
   const checkedDays = [...document.querySelectorAll('.wkDayCheck:checked')].map(cb => cb.value);
   if(checkedDays.length === 0){alert('삭제할 요일을 선택하세요.');return;}
   const existing = {...((allWeeklyData[viewWeekKey] || {})[dept]) || {}};
-  checkedDays.forEach(d => { delete existing[d]; delete existing['period_'+d]; });
+  checkedDays.forEach(d => { delete existing[d]; delete existing['period_'+d]; delete existing['time_'+d]; });
   existing.updatedAt = Date.now();
   await set(ref(db, 'weekly/' + viewWeekKey + '/' + dept), existing);
   closeModal('wkCellModal');
